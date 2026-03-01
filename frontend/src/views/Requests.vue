@@ -1,26 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import api from '../services/api';
-import { 
-  FileText, 
-  Search, 
-  PlusCircle, 
+import {
+  FileText,
+  Search,
+  PlusCircle,
   Filter,
   Calendar,
-  ChevronRight,
-  AlertCircle
+  ChevronRight
 } from 'lucide-vue-next';
 import { format } from 'date-fns';
+import type { WorkflowRequest } from '@/types';
 
-const requests = ref([]);
-const filteredRequests = ref([]);
+const requests = ref<WorkflowRequest[]>([]);
+const filteredRequests = ref<WorkflowRequest[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref('all');
 const isLoading = ref(true);
 
 const fetchRequests = async () => {
   try {
-    const response = await api.get('/requests');
+    const response = await api.get<WorkflowRequest[]>('/requests');
     requests.value = response.data;
     filterRequests();
   } catch (error) {
@@ -31,7 +31,7 @@ const fetchRequests = async () => {
 };
 
 const filterRequests = () => {
-  filteredRequests.value = requests.value.filter((request: any) => {
+  filteredRequests.value = requests.value.filter((request: WorkflowRequest) => {
     const matchesSearch = request.workflow_definition?.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                           request.status.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchesStatus = statusFilter.value === 'all' || request.status === statusFilter.value;

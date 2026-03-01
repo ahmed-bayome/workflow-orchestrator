@@ -1,15 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import type { PendingApproval } from '@/types'
 
 export const useApprovalsStore = defineStore('approvals', () => {
-  const pendingApprovals = ref<any[]>([])
+  const pendingApprovals = ref<PendingApproval[]>([])
   const loading = ref(false)
 
   async function fetchPendingApprovals() {
     loading.value = true
     try {
-      const response = await api.get('/approvals/pending')
+      const response = await api.get<PendingApproval[]>('/approvals/pending')
       pendingApprovals.value = response.data
     } finally {
       loading.value = false

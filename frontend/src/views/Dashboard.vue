@@ -2,16 +2,19 @@
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import api from '../services/api';
-import { 
-  FileText, 
-  CheckSquare, 
-  Clock, 
-  ChevronRight, 
+import {
+  FileText,
+  CheckSquare,
+  Clock,
+  ChevronRight,
   PlusCircle,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Workflow,
+  Shield
 } from 'lucide-vue-next';
 import { formatDistanceToNow } from 'date-fns';
+import type { WorkflowRequest } from '@/types';
 
 const authStore = useAuthStore();
 const stats = ref({
@@ -19,21 +22,21 @@ const stats = ref({
   pending_approvals: 0,
   total_requests: 0,
 });
-const recentRequests = ref([]);
+const recentRequests = ref<WorkflowRequest[]>([]);
 const isLoading = ref(true);
 
 const fetchDashboardData = async () => {
   try {
     const [requestsRes, approvalsRes] = await Promise.all([
-      api.get('/requests'),
+      api.get<WorkflowRequest[]>('/requests'),
       api.get('/approvals/pending')
     ]);
 
     const allRequests = requestsRes.data;
     recentRequests.value = allRequests.slice(0, 5);
-    
+
     stats.value = {
-      pending_requests: allRequests.filter((r: any) => r.status === 'pending' || r.status === 'in_progress').length,
+      pending_requests: allRequests.filter((r: WorkflowRequest) => r.status === 'pending' || r.status === 'in_progress').length,
       pending_approvals: approvalsRes.data.length,
       total_requests: allRequests.length,
     };
@@ -125,7 +128,7 @@ const getStatusColor = (status: string) => {
           <div v-if="isLoading" class="p-8 flex justify-center">
             <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
           </div>
-          
+
           <div v-else-if="recentRequests.length === 0" class="p-12 text-center text-gray-500">
             <AlertCircle class="w-12 h-12 mx-auto text-gray-200 mb-4" />
             <p>No requests found yet.</p>

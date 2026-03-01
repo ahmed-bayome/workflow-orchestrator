@@ -2,11 +2,11 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
-import { 
-  ChevronLeft, 
-  Send, 
-  CheckCircle2, 
-  Loader2, 
+import {
+  ChevronLeft,
+  Send,
+  CheckCircle2,
+  Loader2,
   AlertCircle,
   FileText,
   Calendar,
@@ -18,23 +18,25 @@ import {
   AlignLeft,
   ChevronDown
 } from 'lucide-vue-next';
+import type { WorkflowDefinition, FormField, FormFieldValue, ApiError } from '@/types';
+import type { AxiosError } from 'axios';
 
 const router = useRouter();
-const workflows = ref([]);
+const workflows = ref<WorkflowDefinition[]>([]);
 const selectedWorkflowId = ref('');
-const formData = ref<Record<string, any>>({});
+const formData = ref<Record<string, FormFieldValue>>({});
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const error = ref('');
 
-const selectedWorkflow = computed(() => 
-  workflows.value.find((w: any) => w.id == selectedWorkflowId.value)
+const selectedWorkflow = computed(() =>
+  workflows.value.find((w: WorkflowDefinition) => w.id == Number(selectedWorkflowId.value))
 );
 
 const fetchWorkflows = async () => {
   try {
-    const response = await api.get('/admin/workflows');
-    workflows.value = response.data.filter((w: any) => w.is_active);
+    const response = await api.get<WorkflowDefinition[]>('/admin/workflows');
+    workflows.value = response.data.filter((w: WorkflowDefinition) => w.is_active);
   } catch (err) {
     console.error('Error fetching workflows:', err);
   } finally {
@@ -45,7 +47,7 @@ const fetchWorkflows = async () => {
 const handleWorkflowChange = () => {
   formData.value = {};
   if (selectedWorkflow.value) {
-    selectedWorkflow.value.form_schema.fields.forEach((field: any) => {
+    selectedWorkflow.value.form_schema.fields.forEach((field: FormField) => {
       formData.value[field.id] = '';
     });
   }
@@ -54,15 +56,16 @@ const handleWorkflowChange = () => {
 const submitRequest = async () => {
   isSubmitting.value = true;
   error.value = '';
-  
+
   try {
     await api.post('/requests', {
       workflow_definition_id: selectedWorkflowId.value,
       payload: formData.value
     });
     router.push('/requests');
-  } catch (err: any) {
-    error.value = err.response?.data?.error || 'Failed to submit request. Please check all fields.';
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    error.value = axiosError.response?.data?.message || 'Failed to submit request. Please check all fields.';
   } finally {
     isSubmitting.value = false;
   }
@@ -86,8 +89,8 @@ const getFieldIcon = (type: string) => {
 <template>
   <div class="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
     <div class="flex items-center gap-4">
-      <button 
-        @click="router.back()" 
+      <button
+        @click="router.back()"
         class="p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900 border border-transparent hover:border-gray-200 shadow-sm"
       >
         <ChevronLeft class="w-6 h-6" />
@@ -128,7 +131,7 @@ const getFieldIcon = (type: string) => {
                 Choose a workflow and fill in the required details to start the approval process.
               </p>
             </div>
-            
+
             <div class="space-y-6">
               <div class="flex items-start gap-3">
                 <div class="bg-white p-2 rounded-lg shadow-sm text-indigo-600 mt-0.5">
@@ -186,7 +189,7 @@ const getFieldIcon = (type: string) => {
                 <FileText class="w-6 h-6 text-indigo-600" />
                 Fill Information
               </h3>
-              
+
               <div class="grid grid-cols-1 gap-8">
                 <div v-for="field in selectedWorkflow.form_schema.fields" :key="field.id" class="space-y-2">
                   <label :for="field.id" class="text-sm font-bold text-gray-700 uppercase tracking-tight flex items-center gap-2">
@@ -199,7 +202,7 @@ const getFieldIcon = (type: string) => {
                   <div v-if="field.type === 'textarea'">
                     <textarea
                       :id="field.id"
-                      v-model="formData[field.id]"
+                      v-model="formData[field.id] as string"
                       :required="field.required"
                       :placeholder="field.placeholder"
                       rows="4"
@@ -211,7 +214,7 @@ const getFieldIcon = (type: string) => {
                     <div class="relative">
                       <select
                         :id="field.id"
-                        v-model="formData[field.id]"
+                        v-model="formData[field.id] as string"
                         :required="field.required"
                         class="block w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-600 transition-all outline-none appearance-none cursor-pointer shadow-sm"
                       >
@@ -229,7 +232,7 @@ const getFieldIcon = (type: string) => {
                   <div v-else>
                     <input
                       :id="field.id"
-                      v-model="formData[field.id]"
+                      v-model="formData[field.id] as string"
                       :type="field.type"
                       :required="field.required"
                       :placeholder="field.placeholder"
@@ -258,14 +261,3 @@ const getFieldIcon = (type: string) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-.animate-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-</style>

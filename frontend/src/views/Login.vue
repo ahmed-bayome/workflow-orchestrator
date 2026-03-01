@@ -15,7 +15,7 @@ const error = ref('');
 const login = async () => {
   isLoading.value = true;
   error.value = '';
-  
+
   const success = await authStore.login({
     email: email.value,
     password: password.value,
@@ -26,7 +26,7 @@ const login = async () => {
   } else {
     error.value = authStore.error || 'Login failed. Please check your credentials.';
   }
-  
+
   isLoading.value = false;
 };
 </script>
@@ -101,14 +101,3 @@ const login = async () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-.animate-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-</style>

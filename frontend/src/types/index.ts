@@ -19,7 +19,7 @@ export interface FormField {
   required: boolean
   placeholder?: string
   options?: { value: string; label: string }[]
-  validation?: any
+  validation?: Record<string, unknown>
 }
 
 export interface FormSchema {
@@ -58,7 +58,7 @@ export interface RequestStep {
   execution_group: string
   order: number
   approval_mode: 'any' | 'all'
-  status: 'pending' | 'approved' | 'rejected' | 'skipped'
+  status: 'pending' | 'in_progress' | 'approved' | 'rejected' | 'skipped'
   required_approvers_snapshot: number[]
   completed_at?: string
   actions: StepAction[]
@@ -74,6 +74,8 @@ export interface StepAction {
   created_at: string
 }
 
+export type WorkflowRequestPayload = Record<string, string | number | boolean | null>
+
 export interface WorkflowRequest {
   id: number
   workflow_definition_id: number
@@ -85,11 +87,58 @@ export interface WorkflowRequest {
   }
   requester_id: number
   requester?: User
-  payload: any
+  payload: WorkflowRequestPayload
   status: 'pending' | 'in_progress' | 'approved' | 'rejected' | 'failed'
   current_execution_group?: string
   completed_at?: string
   created_at: string
   updated_at: string
   steps: RequestStep[]
+}
+
+// Loading states
+export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
+
+// Form field value type (used in dynamic forms)
+export type FormFieldValue = string | number | boolean | File | null
+
+// API error shape
+export interface ApiError {
+  message: string
+  errors?: Record<string, string[]>
+}
+
+// Auth forms
+export interface LoginCredentials {
+  email: string
+  password: string
+}
+
+export interface RegisterData {
+  name: string
+  email: string
+  password: string
+  password_confirmation: string
+}
+
+// Admin form payloads
+export interface UserFormData {
+  id?: number | null
+  name: string
+  email: string
+  password?: string
+  password_confirmation?: string
+  roles: number[]
+}
+
+export interface WorkflowFormData {
+  name: string
+  description?: string
+  form_schema: FormSchema
+  steps: Omit<WorkflowStep, 'id'>[]
+}
+
+// Pending approval item from /approvals/pending
+export interface PendingApproval extends RequestStep {
+  request: WorkflowRequest
 }

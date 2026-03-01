@@ -26,3 +26,7 @@ body {
 #app {
   width: 100%;
 }
+
+/* Scrollbar utility — not expressible as a vanilla Tailwind class */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

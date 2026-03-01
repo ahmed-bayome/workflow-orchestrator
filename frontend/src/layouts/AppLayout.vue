@@ -9,10 +9,7 @@ import {
   Shield,
   LogOut,
   Workflow,
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronRight
+  Menu
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted } from 'vue';
 
@@ -60,31 +57,30 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-screen w-full bg-slate-100 overflow-hidden relative">
-    
+
     <!-- Mobile Header -->
     <header class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-indigo-800 text-white flex items-center justify-between px-6 z-[60] shadow-md">
       <div class="flex items-center gap-3">
         <Workflow class="w-6 h-6" />
         <span class="text-xl font-black tracking-tighter uppercase leading-none">Orchestrator</span>
       </div>
-      <button 
+      <button
         @click="isMobileMenuOpen = !isMobileMenuOpen"
         class="p-2 hover:bg-white/10 rounded-xl transition-colors"
       >
         <Menu v-if="!isMobileMenuOpen" class="w-6 h-6" />
-        <X v-else class="w-6 h-6" />
       </button>
     </header>
 
     <!-- Sidebar Overlay (Mobile Only) -->
-    <div 
-      v-if="isMobileMenuOpen" 
+    <div
+      v-if="isMobileMenuOpen"
       class="lg:hidden fixed inset-0 bg-indigo-950/60 backdrop-blur-sm z-[70] animate-in fade-in duration-300"
       @click="isMobileMenuOpen = false"
     ></div>
 
     <!-- Sidebar -->
-    <aside 
+    <aside
       class="fixed lg:static inset-y-0 left-0 flex flex-col bg-indigo-700 text-white shadow-2xl z-[80] flex-shrink-0 transition-all duration-300 ease-in-out"
       :class="[
         isCollapsed ? 'lg:w-24' : 'lg:w-72',
@@ -112,7 +108,7 @@ onUnmounted(() => {
           <X class="w-6 h-6" />
         </button>
       </div>
-      
+
       <!-- Nav Menu -->
       <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto scrollbar-hide">
         <router-link
@@ -122,8 +118,8 @@ onUnmounted(() => {
           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-white/10 transition-all font-bold text-sm group"
           :class="[
             isCollapsed ? 'lg:justify-center' : '',
-            $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/') 
-              ? 'bg-white/20 text-white shadow-lg shadow-indigo-800/20' 
+            $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/')
+              ? 'bg-white/20 text-white shadow-lg shadow-indigo-800/20'
               : ''
           ]"
         >
@@ -141,8 +137,8 @@ onUnmounted(() => {
               class="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-white/10 transition-all font-bold text-sm group"
               :class="[
                 isCollapsed ? 'lg:justify-center' : '',
-                $route.path.startsWith(item.path) 
-                  ? 'bg-white/20 text-white shadow-lg shadow-indigo-800/20' 
+                $route.path.startsWith(item.path)
+                  ? 'bg-white/20 text-white shadow-lg shadow-indigo-800/20'
                   : ''
               ]"
               :title="(isCollapsed && !isMobileMenuOpen) ? item.name : ''"
@@ -165,7 +161,7 @@ onUnmounted(() => {
             <p class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest truncate opacity-70">{{ authStore.user?.roles?.[0]?.name }}</p>
           </div>
         </div>
-        
+
         <button
           @click="logout"
           class="mt-4 flex items-center gap-4 w-full px-4 py-3.5 rounded-2xl hover:bg-red-500 text-white lg:text-indigo-200 lg:hover:text-white transition-all font-black text-[10px] uppercase tracking-widest group"
@@ -186,20 +182,3 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Transition for sidebar */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-</style>
-
-
-<style scoped>
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-</style>

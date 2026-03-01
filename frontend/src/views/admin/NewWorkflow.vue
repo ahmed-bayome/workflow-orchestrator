@@ -2,11 +2,10 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../../services/api';
-import { 
-  ChevronLeft, 
-  Save, 
-  Plus, 
-  Trash2, 
+import {
+  ChevronLeft,
+  Save,
+  Trash2,
   Settings,
   GripVertical,
   Layers,
@@ -15,11 +14,14 @@ import {
   X,
   ChevronDown,
   Info,
-  ExternalLink
+  ExternalLink,
+  Workflow
 } from 'lucide-vue-next';
+import type { Role, FormField, ApiError } from '@/types';
+import type { AxiosError } from 'axios';
 
 const router = useRouter();
-const roles = ref([]);
+const roles = ref<Role[]>([]);
 const name = ref('');
 const description = ref('');
 const isSubmitting = ref(false);
@@ -32,17 +34,33 @@ const fieldTypes = [
   { label: 'Textarea', value: 'textarea' },
 ];
 
-const fields = ref([
+type FieldOption = { label: string; value: string }
+
+interface BuilderField extends Omit<FormField, 'id' | 'type' | 'validation'> {
+  id: string
+  type: 'text' | 'textarea' | 'number' | 'email' | 'date' | 'select' | 'radio' | 'checkbox' | 'file'
+  options: FieldOption[]
+}
+
+interface BuilderStep {
+  id: string
+  name: string
+  role_id: number | null
+  approval_mode: 'any' | 'all'
+  execution_group: number
+}
+
+const fields = ref<BuilderField[]>([
   { id: 'field_' + Date.now(), label: '', type: 'text', required: false, options: [] }
 ]);
 
-const steps = ref([
+const steps = ref<BuilderStep[]>([
   { id: 'step_' + Date.now(), name: '', role_id: null, approval_mode: 'any', execution_group: 1 }
 ]);
 
 const fetchRoles = async () => {
   try {
-    const response = await api.get('/admin/roles');
+    const response = await api.get<Role[]>('/admin/roles');
     roles.value = response.data;
   } catch (err) {
     console.error('Error fetching roles:', err);
@@ -64,18 +82,23 @@ const removeField = (index: number) => {
 };
 
 const addOption = (fieldIndex: number) => {
-  if (!fields.value[fieldIndex].options) {
-    fields.value[fieldIndex].options = [];
+  const field = fields.value[fieldIndex]
+  if (!field) return
+  if (!field.options) {
+    field.options = [];
   }
-  fields.value[fieldIndex].options.push({ label: '', value: '' });
+  field.options.push({ label: '', value: '' });
 };
 
 const removeOption = (fieldIndex: number, optionIndex: number) => {
-  fields.value[fieldIndex].options.splice(optionIndex, 1);
+  const field = fields.value[fieldIndex]
+  if (!field?.options) return
+  field.options.splice(optionIndex, 1);
 };
 
 const addStep = () => {
-  const lastGroup = steps.value.length > 0 ? steps.value[steps.value.length - 1].execution_group : 1;
+  const lastStep = steps.value[steps.value.length - 1]
+  const lastGroup = lastStep ? lastStep.execution_group : 1;
   steps.value.push({
     id: 'step_' + Date.now(),
     name: '',
@@ -101,12 +124,12 @@ const saveWorkflow = async () => {
       steps: steps.value
     });
     router.push('/admin/workflows');
-  } catch (err: any) {
-    if (err.response?.data?.errors) {
-      const errors = err.response.data.errors;
-      error.value = Object.values(errors).flat().join(', ');
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    if (axiosError.response?.data?.errors) {
+      error.value = Object.values(axiosError.response.data.errors).flat().join(', ');
     } else {
-      error.value = err.response?.data?.message || 'Failed to save workflow. Please check your inputs.';
+      error.value = axiosError.response?.data?.message || 'Failed to save workflow. Please check your inputs.';
     }
   } finally {
     isSubmitting.value = false;
@@ -121,8 +144,8 @@ onMounted(fetchRoles);
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-200">
       <div class="flex items-center gap-4">
-        <button 
-          @click="router.back()" 
+        <button
+          @click="router.back()"
           class="p-2.5 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-200 shadow-sm"
         >
           <ChevronLeft class="w-6 h-6" />
@@ -132,8 +155,8 @@ onMounted(fetchRoles);
           <p class="text-slate-500 font-medium italic">Architecting the future of automation.</p>
         </div>
       </div>
-      
-      <button 
+
+      <button
         @click="saveWorkflow"
         :disabled="isSubmitting"
         class="inline-flex items-center justify-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
@@ -152,11 +175,11 @@ onMounted(fetchRoles);
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-      
+
       <!-- Main Builder Area -->
       <div class="lg:col-span-8 space-y-10">
-        
-        <!-- 1. Basic Config (Top) -->
+
+        <!-- 1. Basic Config -->
         <section class="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-200">
           <div class="flex items-center gap-4 mb-8">
             <div class="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
@@ -164,23 +187,23 @@ onMounted(fetchRoles);
             </div>
             <h2 class="text-2xl font-black text-slate-900">Basic Configuration</h2>
           </div>
-          
+
           <div class="space-y-6">
             <div>
               <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Workflow Name</label>
-              <input 
-                v-model="name" 
-                type="text" 
-                placeholder="e.g. Purchase Request" 
+              <input
+                v-model="name"
+                type="text"
+                placeholder="e.g. Purchase Request"
                 class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-lg font-bold focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all shadow-inner"
               />
             </div>
             <div>
               <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Description</label>
-              <textarea 
-                v-model="description" 
-                rows="3" 
-                placeholder="What is this workflow for?" 
+              <textarea
+                v-model="description"
+                rows="3"
+                placeholder="What is this workflow for?"
                 class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-base font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all resize-none shadow-inner"
               ></textarea>
             </div>
@@ -196,7 +219,7 @@ onMounted(fetchRoles);
               </div>
               <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Dynamic Form Schema</h2>
             </div>
-            <button 
+            <button
               @click="addField"
               class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-5 py-2.5 rounded-xl font-black transition-all text-xs uppercase tracking-widest border border-indigo-100 shadow-sm"
             >
@@ -206,9 +229,9 @@ onMounted(fetchRoles);
           </div>
 
           <div class="space-y-4">
-            <div 
-              v-for="(field, index) in fields" 
-              :key="field.id" 
+            <div
+              v-for="(field, index) in fields"
+              :key="field.id"
               class="bg-white rounded-[2rem] p-6 md:p-8 border border-slate-200 shadow-xl shadow-slate-100/50 flex flex-col gap-6 animate-in zoom-in-95 duration-300 relative group"
             >
               <div class="flex items-center justify-between border-b border-slate-50 pb-4">
@@ -218,7 +241,7 @@ onMounted(fetchRoles);
                   </div>
                   <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Field #{{ index + 1 }}</span>
                 </div>
-                <button 
+                <button
                   @click="removeField(index)"
                   class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                   title="Remove Field"
@@ -232,7 +255,7 @@ onMounted(fetchRoles);
                   <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Field Label</label>
                   <input v-model="field.label" type="text" placeholder="e.g. Total Amount" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all" />
                 </div>
-                
+
                 <div class="lg:col-span-4">
                   <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Input Type</label>
                   <select v-model="field.type" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all cursor-pointer">
@@ -264,7 +287,7 @@ onMounted(fetchRoles);
                     + Add Option
                   </button>
                 </div>
-                
+
                 <div class="space-y-3">
                   <div v-if="!field.options || field.options.length === 0" class="text-xs text-slate-400 font-medium italic text-center py-4 bg-white/50 rounded-2xl border border-slate-100">
                     No options defined yet. Click "Add Option" to begin.
@@ -294,7 +317,7 @@ onMounted(fetchRoles);
               </div>
               <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Approval Pipeline</h2>
             </div>
-            <button 
+            <button
               @click="addStep"
               class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-5 py-2.5 rounded-xl font-black transition-all text-xs uppercase tracking-widest border border-indigo-100 shadow-sm"
             >
@@ -341,7 +364,7 @@ onMounted(fetchRoles);
                   <input v-model.number="step.execution_group" type="number" min="1" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all text-center" />
                 </div>
 
-                <button 
+                <button
                   @click="removeStep(index)"
                   class="p-2.5 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                 >
@@ -357,7 +380,7 @@ onMounted(fetchRoles);
       <div class="lg:col-span-4 space-y-8">
         <section class="bg-indigo-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-indigo-200 border border-white/10 sticky top-8 overflow-hidden group">
           <Workflow class="absolute -right-8 -bottom-8 w-40 h-40 text-white opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-1000" />
-          
+
           <div class="relative z-10 space-y-8">
             <div class="flex items-center gap-3">
               <div class="bg-white/10 p-2 rounded-xl">
@@ -381,8 +404,8 @@ onMounted(fetchRoles);
               </div>
             </div>
 
-            <router-link 
-              to="/admin/workflows/guide" 
+            <router-link
+              to="/admin/workflows/guide"
               class="w-full flex items-center justify-between px-6 py-4 bg-white/10 hover:bg-white text-white hover:text-indigo-900 rounded-2xl transition-all font-black text-xs uppercase tracking-widest group/btn border border-white/10"
             >
               Full A-Z Guide
@@ -395,14 +418,3 @@ onMounted(fetchRoles);
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-.animate-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-</style>

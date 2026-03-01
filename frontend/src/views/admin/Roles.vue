@@ -1,23 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import api from '../../services/api';
-import { 
-  Shield, 
-  PlusCircle, 
-  Trash2, 
-  User, 
-  CheckCircle2, 
-  XCircle,
-  Settings,
+import {
+  PlusCircle,
+  Trash2,
+  User,
   ShieldCheck,
   ShieldAlert,
   Loader2,
   AlertCircle,
-  MoreVertical,
   ArrowRight
 } from 'lucide-vue-next';
+import type { Role, ApiError } from '@/types';
+import type { AxiosError } from 'axios';
 
-const roles = ref([]);
+const roles = ref<Role[]>([]);
 const isLoading = ref(true);
 const newRoleName = ref('');
 const isSubmitting = ref(false);
@@ -25,7 +22,7 @@ const error = ref('');
 
 const fetchRoles = async () => {
   try {
-    const response = await api.get('/admin/roles');
+    const response = await api.get<Role[]>('/admin/roles');
     roles.value = response.data;
   } catch (err) {
     console.error('Error fetching roles:', err);
@@ -38,13 +35,14 @@ const createRole = async () => {
   if (!newRoleName.value) return;
   isSubmitting.value = true;
   error.value = '';
-  
+
   try {
-    const response = await api.post('/admin/roles', { name: newRoleName.value });
+    const response = await api.post<Role>('/admin/roles', { name: newRoleName.value });
     roles.value.push(response.data);
     newRoleName.value = '';
-  } catch (err: any) {
-    error.value = err.response?.data?.error || 'Failed to create role.';
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    error.value = axiosError.response?.data?.message || 'Failed to create role.';
   } finally {
     isSubmitting.value = false;
   }
@@ -54,9 +52,10 @@ const deleteRole = async (id: number) => {
   if (!confirm('Are you sure? This action cannot be undone.')) return;
   try {
     await api.delete(`/admin/roles/${id}`);
-    roles.value = roles.value.filter((r: any) => r.id !== id);
-  } catch (err: any) {
-    alert(err.response?.data?.error || 'Failed to delete role.');
+    roles.value = roles.value.filter((r: Role) => r.id !== id);
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    alert(axiosError.response?.data?.message || 'Failed to delete role.');
   }
 };
 
@@ -134,9 +133,9 @@ onMounted(fetchRoles);
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div 
-            v-for="role in roles" 
-            :key="role.id" 
+          <div
+            v-for="role in roles"
+            :key="role.id"
             class="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl shadow-gray-100/30 flex items-center gap-6 group hover:border-indigo-200 transition-all"
           >
             <div class="bg-indigo-50 w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-2xl shadow-inner group-hover:rotate-6 transition-transform">
@@ -151,7 +150,7 @@ onMounted(fetchRoles);
               </p>
             </div>
 
-            <button 
+            <button
               @click="deleteRole(role.id)"
               class="p-3 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all opacity-0 group-hover:opacity-100"
             >

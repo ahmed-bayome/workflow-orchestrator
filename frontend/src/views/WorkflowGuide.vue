@@ -3,7 +3,6 @@ import {
   Workflow, 
   Layers, 
   GitMerge, 
-  CheckSquare, 
   Zap, 
   Send, 
   Users,

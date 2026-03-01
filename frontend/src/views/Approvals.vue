@@ -2,12 +2,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import api from '../services/api';
 import echo from '../services/echo';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  MessageSquare, 
-  Send,
+import {
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
   Loader2,
   AlertCircle,
   FileText,
@@ -17,8 +15,10 @@ import {
   Calendar
 } from 'lucide-vue-next';
 import { format } from 'date-fns';
+import type { PendingApproval, ApiError } from '@/types';
+import type { AxiosError } from 'axios';
 
-const pendingApprovals = ref([]);
+const pendingApprovals = ref<PendingApproval[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref<number | null>(null);
 const comments = ref<Record<number, string>>({});
@@ -26,10 +26,10 @@ const error = ref('');
 
 const fetchPendingApprovals = async () => {
   try {
-    const response = await api.get('/approvals/pending');
+    const response = await api.get<PendingApproval[]>('/approvals/pending');
     pendingApprovals.value = response.data;
     // Initialize comments for each new approval
-    response.data.forEach((item: any) => {
+    response.data.forEach((item: PendingApproval) => {
       if (comments.value[item.id] === undefined) {
         comments.value[item.id] = '';
       }
@@ -50,15 +50,16 @@ const handleAction = async (requestId: number, stepId: number, action: 'approve'
 
   isSubmitting.value = stepId;
   error.value = '';
-  
+
   try {
     await api.post(`/requests/${requestId}/steps/${stepId}/${action}`, {
       comment: comments.value[stepId]
     });
     delete comments.value[stepId];
     await fetchPendingApprovals();
-  } catch (err: any) {
-    error.value = err.response?.data?.error || `Failed to ${action} request.`;
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    error.value = axiosError.response?.data?.message || `Failed to ${action} request.`;
   } finally {
     isSubmitting.value = null;
   }
@@ -66,7 +67,7 @@ const handleAction = async (requestId: number, stepId: number, action: 'approve'
 
 onMounted(() => {
   fetchPendingApprovals();
-  
+
   // Real-time updates for approvals list
   echo.private('requests')
     .listen('RequestUpdated', () => {
@@ -78,15 +79,7 @@ onUnmounted(() => {
   echo.leave('requests');
 });
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'approved': return 'bg-green-100 text-green-700 border-green-200';
-    case 'rejected': return 'bg-red-100 text-red-700 border-red-200';
-    case 'in_progress': return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    default: return 'bg-gray-100 text-gray-700 border-gray-200';
-  }
-};
+
 </script>
 
 <template>
@@ -124,9 +117,9 @@ const getStatusColor = (status: string) => {
     </div>
 
     <div v-else class="space-y-8">
-      <div 
-        v-for="item in pendingApprovals" 
-        :key="item.id" 
+      <div
+        v-for="item in pendingApprovals"
+        :key="item.id"
         class="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden transition-all"
       >
         <div class="flex flex-col md:flex-row">
@@ -142,7 +135,7 @@ const getStatusColor = (status: string) => {
                   <p class="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-1.5">Request #{{ item.request.id }}</p>
                 </div>
               </div>
-              
+
               <div class="space-y-4 pt-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-100 shadow-sm text-gray-500">
@@ -182,7 +175,7 @@ const getStatusColor = (status: string) => {
             <div class="space-y-4">
               <h4 class="text-lg font-black text-gray-900 flex items-center gap-2">
                 <MessageSquare class="w-5 h-5 text-indigo-400" />
-                Decision & Feedback
+                Decision &amp; Feedback
               </h4>
               <p class="text-sm text-gray-500 font-medium leading-relaxed">
                 Provide your decision and comments for the current step: <span class="text-indigo-700 font-black">{{ item.step_definition?.name }}</span>.
@@ -204,7 +197,7 @@ const getStatusColor = (status: string) => {
                 <XCircle class="w-5 h-5 group-hover:rotate-12 transition-transform" />
                 REJECT
               </button>
-              
+
               <button
                 @click="handleAction(item.request.id, item.id, 'approve')"
                 :disabled="isSubmitting !== null"
@@ -221,14 +214,3 @@ const getStatusColor = (status: string) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-.animate-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-</style>

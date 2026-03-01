@@ -3,32 +3,31 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import echo from '../services/echo';
-import { 
-  ChevronLeft, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  User, 
+import {
+  ChevronLeft,
+  Clock,
+  CheckCircle2,
+  XCircle,
   Calendar,
   AlertCircle,
   FileText,
   Activity,
   MessageSquare,
-  ArrowRight,
   Shield,
   Loader2
 } from 'lucide-vue-next';
 import { format } from 'date-fns';
+import type { WorkflowRequest, RequestStep } from '@/types';
 
 const route = useRoute();
 const router = useRouter();
-const request = ref<any>(null);
+const request = ref<WorkflowRequest | null>(null);
 const isLoading = ref(true);
 const error = ref('');
 
 const fetchRequestDetails = async () => {
   try {
-    const response = await api.get(`/requests/${route.params.id}`);
+    const response = await api.get<WorkflowRequest>(`/requests/${route.params.id}`);
     request.value = response.data;
   } catch (err) {
     console.error('Error fetching request details:', err);
@@ -40,16 +39,18 @@ const fetchRequestDetails = async () => {
 
 onMounted(() => {
   fetchRequestDetails();
-  
+
   // Real-time updates
   echo.private(`request.${route.params.id}`)
-    .listen('RequestUpdated', (data: any) => {
+    .listen('RequestUpdated', (data: { request: WorkflowRequest }) => {
       request.value = data.request;
     })
-    .listen('StepUpdated', (data: any) => {
-      const stepIndex = request.value.steps.findIndex((s: any) => s.id === data.step.id);
-      if (stepIndex !== -1) {
-        request.value.steps[stepIndex] = data.step;
+    .listen('StepUpdated', (data: { step: RequestStep }) => {
+      if (request.value) {
+        const stepIndex = request.value.steps.findIndex((s: RequestStep) => s.id === data.step.id);
+        if (stepIndex !== -1) {
+          request.value.steps[stepIndex] = data.step;
+        }
       }
     });
 });
@@ -85,8 +86,8 @@ const getStepIcon = (status: string) => {
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
       <div class="flex items-center gap-4">
-        <button 
-          @click="router.back()" 
+        <button
+          @click="router.back()"
           class="p-2.5 rounded-xl hover:bg-white transition-all text-gray-500 hover:text-gray-900 border border-transparent hover:border-gray-200 shadow-sm"
         >
           <ChevronLeft class="w-6 h-6" />
@@ -101,7 +102,7 @@ const getStepIcon = (status: string) => {
           <p v-if="request" class="text-gray-500 font-medium">Submitted for {{ request.workflow_definition?.name }}</p>
         </div>
       </div>
-      
+
       <div v-if="request" class="flex items-center gap-4 bg-white px-6 py-4 rounded-2xl border border-gray-100 shadow-sm">
         <div class="text-right">
           <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Created on</p>
@@ -132,7 +133,7 @@ const getStepIcon = (status: string) => {
     </div>
 
     <!-- Content -->
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div v-else-if="request" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- Left: Request Payload -->
       <div class="lg:col-span-2 space-y-8">
         <section class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden">
@@ -150,12 +151,12 @@ const getStepIcon = (status: string) => {
               <span class="text-xs font-bold text-slate-600">{{ request.requester?.name }}</span>
             </div>
           </div>
-          
+
           <div class="p-8">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div 
-                v-for="field in request.workflow_snapshot.form_schema.fields" 
-                :key="field.id" 
+              <div
+                v-for="field in request.workflow_snapshot.form_schema.fields"
+                :key="field.id"
                 :class="[
                   'p-5 rounded-3xl border transition-all group',
                   field.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3 bg-slate-50/50 border-slate-100' : 'bg-white border-slate-100 shadow-sm'
@@ -164,11 +165,11 @@ const getStepIcon = (status: string) => {
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 transition-colors">
                   {{ field.label }}
                 </label>
-                
+
                 <div v-if="field.type === 'textarea'" class="text-slate-700 font-medium whitespace-pre-wrap text-sm leading-relaxed">
                   {{ request.payload[field.id] || 'N/A' }}
                 </div>
-                
+
                 <div v-else class="flex items-center gap-3">
                   <div class="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.4)]"></div>
                   <span class="text-base font-bold text-slate-900 tracking-tight">
@@ -180,18 +181,18 @@ const getStepIcon = (status: string) => {
           </div>
         </section>
 
-        <!-- Activity Feed (Optional) -->
+        <!-- Activity Feed -->
         <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
           <h2 class="text-xl font-black text-gray-900 mb-8 flex items-center gap-3">
             <Activity class="w-6 h-6 text-indigo-600" />
             Full History
           </h2>
-          
+
           <div class="space-y-12">
             <div v-for="(step, index) in request.steps" :key="step.id" class="relative pl-12">
               <!-- Connector Line -->
-              <div 
-                v-if="index < request.steps.length - 1" 
+              <div
+                v-if="index < request.steps.length - 1"
                 class="absolute left-[15px] top-10 bottom-[-48px] w-0.5 bg-slate-100"
               ></div>
 
@@ -231,7 +232,7 @@ const getStepIcon = (status: string) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div v-else-if="step.status === 'pending' || step.status === 'in_progress'" class="text-sm text-gray-400 font-medium italic pl-1 flex items-center gap-2">
                   <Clock class="w-4 h-4" />
                   Waiting for approvers in {{ step.role?.name || 'Assigned Role' }}
@@ -253,8 +254,8 @@ const getStepIcon = (status: string) => {
           <div class="space-y-0 relative">
             <div v-for="(step, index) in request.steps" :key="step.id" class="relative group">
               <!-- Connector Line -->
-              <div 
-                v-if="index < request.steps.length - 1" 
+              <div
+                v-if="index < request.steps.length - 1"
                 class="absolute left-[19px] top-10 bottom-0 w-0.5 bg-white/10"
               ></div>
 
@@ -262,14 +263,14 @@ const getStepIcon = (status: string) => {
                 <!-- Step Order Circle -->
                 <div :class="[
                   'relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-black border-2 transition-all duration-500 flex-shrink-0',
-                  step.status === 'approved' ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20' : 
+                  step.status === 'approved' ? 'bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20' :
                   step.status === 'rejected' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' :
-                  step.status === 'in_progress' ? 'bg-white border-white text-indigo-900 scale-110 shadow-xl' : 
+                  step.status === 'in_progress' ? 'bg-white border-white text-indigo-900 scale-110 shadow-xl' :
                   'bg-indigo-800/50 border-indigo-700 text-indigo-400'
                 ]">
                   {{ index + 1 }}
                 </div>
-                
+
                 <!-- Step Label -->
                 <div class="flex-1 pt-1">
                   <p :class="['font-bold text-base leading-tight', step.status === 'pending' ? 'text-indigo-400' : 'text-white']">
@@ -286,21 +287,21 @@ const getStepIcon = (status: string) => {
           <div class="mt-10 pt-10 border-t border-white/5 space-y-5">
             <div class="flex items-center justify-between">
               <span class="text-indigo-300/60 font-black uppercase tracking-widest text-[10px]">Overall Progress</span>
-              <span :class="['font-black uppercase tracking-widest text-xs', 
-                request.status === 'approved' ? 'text-green-400' : 
+              <span :class="['font-black uppercase tracking-widest text-xs',
+                request.status === 'approved' ? 'text-green-400' :
                 request.status === 'rejected' ? 'text-red-400' : 'text-indigo-300'
               ]">
                 {{ request.status.replace('_', ' ') }}
               </span>
             </div>
             <div class="h-2.5 bg-indigo-950/50 rounded-full overflow-hidden border border-white/5 shadow-inner">
-              <div 
+              <div
                 class="h-full transition-all duration-1000 ease-out rounded-full shadow-lg"
                 :class="[
-                  request.status === 'approved' ? 'bg-green-500' : 
+                  request.status === 'approved' ? 'bg-green-500' :
                   request.status === 'rejected' ? 'bg-red-500' : 'bg-indigo-400'
                 ]"
-                :style="{ width: `${(request.steps.filter((s: any) => s.status === 'approved').length / request.steps.length) * 100}%` }"
+                :style="{ width: `${(request.steps.filter((s: RequestStep) => s.status === 'approved').length / request.steps.length) * 100}%` }"
               ></div>
             </div>
           </div>
@@ -309,13 +310,3 @@ const getStepIcon = (status: string) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-</style>

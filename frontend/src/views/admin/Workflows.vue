@@ -1,28 +1,25 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import api from '../../services/api';
-import { 
-  Workflow, 
-  PlusCircle, 
-  Settings, 
-  Trash2, 
-  CheckCircle2, 
-  XCircle,
-  Clock,
+import {
+  Workflow,
+  PlusCircle,
+  Settings,
+  Trash2,
   User,
   Activity,
-  ChevronRight,
-  Shield,
   Layers
 } from 'lucide-vue-next';
+import type { WorkflowDefinition, ApiError } from '@/types';
+import type { AxiosError } from 'axios';
 
-const workflows = ref([]);
+const workflows = ref<WorkflowDefinition[]>([]);
 const isLoading = ref(true);
 const isDeleting = ref<number | null>(null);
 
 const fetchWorkflows = async () => {
   try {
-    const response = await api.get('/admin/workflows');
+    const response = await api.get<WorkflowDefinition[]>('/admin/workflows');
     workflows.value = response.data;
   } catch (err) {
     console.error('Error fetching workflows:', err);
@@ -33,19 +30,20 @@ const fetchWorkflows = async () => {
 
 const deleteWorkflow = async (id: number) => {
   if (!confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) return;
-  
+
   isDeleting.value = id;
   try {
     await api.delete(`/admin/workflows/${id}`);
-    workflows.value = workflows.value.filter((w: any) => w.id !== id);
-  } catch (err: any) {
-    alert(err.response?.data?.error || 'Failed to delete workflow.');
+    workflows.value = workflows.value.filter((w: WorkflowDefinition) => w.id !== id);
+  } catch (err) {
+    const axiosError = err as AxiosError<ApiError>;
+    alert(axiosError.response?.data?.message || 'Failed to delete workflow.');
   } finally {
     isDeleting.value = null;
   }
 };
 
-const toggleStatus = async (workflow: any) => {
+const toggleStatus = async (workflow: WorkflowDefinition) => {
   try {
     const action = workflow.is_active ? 'deactivate' : 'activate';
     await api.post(`/admin/workflows/${workflow.id}/${action}`);
@@ -98,9 +96,9 @@ onMounted(fetchWorkflows);
 
     <!-- Workflows Grid -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <div 
-        v-for="workflow in workflows" 
-        :key="workflow.id" 
+      <div
+        v-for="workflow in workflows"
+        :key="workflow.id"
         class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden flex flex-col group transition-all"
       >
         <div class="p-8 space-y-6 flex-1">
@@ -108,9 +106,9 @@ onMounted(fetchWorkflows);
             <div class="bg-indigo-700 p-3 rounded-2xl shadow-lg shadow-indigo-100 text-white">
               <Workflow class="w-8 h-8" />
             </div>
-            <button 
+            <button
               @click="toggleStatus(workflow)"
-              :class="['px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border transition-colors relative z-10', 
+              :class="['px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border transition-colors relative z-10',
                 workflow.is_active ? 'bg-green-50 text-green-700 border-green-100 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-100 hover:bg-red-100']"
             >
               {{ workflow.is_active ? 'Active' : 'Inactive' }}
@@ -154,7 +152,14 @@ onMounted(fetchWorkflows);
             {{ workflow.creator?.name }}
           </div>
           <div class="flex items-center gap-2">
-            <button 
+            <router-link
+              :to="`/admin/workflows/${workflow.id}/edit`"
+              class="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm hover:shadow-md"
+              title="Edit Workflow"
+            >
+              <Settings class="w-5 h-5" />
+            </router-link>
+            <button
               @click="deleteWorkflow(workflow.id)"
               :disabled="isDeleting === workflow.id"
               class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50"

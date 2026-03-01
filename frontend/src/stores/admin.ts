@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
-import type { User, Role, WorkflowDefinition } from '@/types'
+import type { User, Role, WorkflowDefinition, UserFormData, WorkflowFormData } from '@/types'
 
 export const useAdminStore = defineStore('admin', () => {
   const users = ref<User[]>([])
@@ -9,17 +9,17 @@ export const useAdminStore = defineStore('admin', () => {
   const workflows = ref<WorkflowDefinition[]>([])
 
   async function fetchUsers() {
-    const response = await api.get('/admin/users')
+    const response = await api.get<User[]>('/admin/users')
     users.value = response.data
   }
 
-  async function createUser(userData: any) {
-    const response = await api.post('/admin/users', userData)
+  async function createUser(userData: UserFormData) {
+    const response = await api.post<User>('/admin/users', userData)
     users.value.push(response.data)
   }
 
-  async function updateUser(id: number, userData: any) {
-    const response = await api.put(`/admin/users/${id}`, userData)
+  async function updateUser(id: number, userData: UserFormData) {
+    const response = await api.put<User>(`/admin/users/${id}`, userData)
     const index = users.value.findIndex(u => u.id === id)
     if (index !== -1) {
       users.value[index] = response.data
@@ -32,12 +32,12 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function fetchRoles() {
-    const response = await api.get('/admin/roles')
+    const response = await api.get<Role[]>('/admin/roles')
     roles.value = response.data
   }
 
   async function createRole(name: string) {
-    const response = await api.post('/admin/roles', { name })
+    const response = await api.post<Role>('/admin/roles', { name })
     roles.value.push(response.data)
   }
 
@@ -47,17 +47,17 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function fetchWorkflows() {
-    const response = await api.get('/admin/workflows')
+    const response = await api.get<WorkflowDefinition[]>('/admin/workflows')
     workflows.value = response.data
   }
 
-  async function createWorkflow(workflowData: any) {
-    const response = await api.post('/admin/workflows', workflowData)
+  async function createWorkflow(workflowData: WorkflowFormData) {
+    const response = await api.post<WorkflowDefinition>('/admin/workflows', workflowData)
     workflows.value.push(response.data)
   }
 
-  async function updateWorkflow(id: number, workflowData: any) {
-    const response = await api.put(`/admin/workflows/${id}`, workflowData)
+  async function updateWorkflow(id: number, workflowData: WorkflowFormData) {
+    const response = await api.put<WorkflowDefinition>(`/admin/workflows/${id}`, workflowData)
     const index = workflows.value.findIndex(w => w.id === id)
     if (index !== -1) {
       workflows.value[index] = response.data

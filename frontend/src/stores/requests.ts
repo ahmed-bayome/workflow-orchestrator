@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
 import echo from '@/services/echo'
-import type { WorkflowRequest } from '@/types'
+import type { WorkflowRequest, RequestStep, FormFieldValue } from '@/types'
 
 export const useRequestsStore = defineStore('requests', () => {
   const requests = ref<WorkflowRequest[]>([])
@@ -12,7 +12,7 @@ export const useRequestsStore = defineStore('requests', () => {
   async function fetchRequests() {
     loading.value = true
     try {
-      const response = await api.get('/requests')
+      const response = await api.get<WorkflowRequest[]>('/requests')
       requests.value = response.data
     } finally {
       loading.value = false
@@ -22,18 +22,18 @@ export const useRequestsStore = defineStore('requests', () => {
   async function fetchRequestDetails(id: number) {
     loading.value = true
     try {
-      const response = await api.get(`/requests/${id}`)
+      const response = await api.get<WorkflowRequest>(`/requests/${id}`)
       currentRequest.value = response.data
-      
+
       // Listen to updates for this specific request
       echo.channel(`request.${id}`)
-        .listen('RequestUpdated', (e: any) => {
+        .listen('RequestUpdated', (e: { request: WorkflowRequest }) => {
           currentRequest.value = e.request
         })
-        .listen('StepUpdated', (e: any) => {
+        .listen('StepUpdated', (e: { step: RequestStep }) => {
           if (currentRequest.value) {
             const stepIndex = currentRequest.value.steps.findIndex(
-              (s: any) => s.id === e.step.id
+              (s: RequestStep) => s.id === e.step.id
             )
             if (stepIndex !== -1) {
               currentRequest.value.steps[stepIndex] = e.step
@@ -45,8 +45,8 @@ export const useRequestsStore = defineStore('requests', () => {
     }
   }
 
-  async function createRequest(workflowDefinitionId: number, payload: any) {
-    const response = await api.post('/requests', {
+  async function createRequest(workflowDefinitionId: number, payload: Record<string, FormFieldValue>) {
+    const response = await api.post<WorkflowRequest>('/requests', {
       workflow_definition_id: workflowDefinitionId,
       payload,
     })

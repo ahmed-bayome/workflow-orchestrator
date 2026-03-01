@@ -1,8 +1,22 @@
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import type { AxiosError } from 'axios'
+import Echo from 'laravel-echo'
+import Pusher from 'pusher-js'
+import type { ChannelAuthorizationCallback } from 'pusher-js'
 
-// @ts-ignore
-window.Pusher = Pusher;
+declare global {
+  interface Window {
+    Pusher: typeof Pusher
+  }
+}
+
+window.Pusher = Pusher
+
+interface EchoChannel {
+  name: string
+}
+
+// Re-export axios types for use across the app
+export type { AxiosError }
 
 const echo = new Echo({
   broadcaster: 'reverb',
@@ -13,10 +27,10 @@ const echo = new Echo({
   forceTLS: false,
   enabledTransports: ['ws', 'wss'],
   // Custom authorizer to use the latest token from localStorage
-  authorizer: (channel: any) => {
+  authorizer: (channel: EchoChannel) => {
     return {
-      authorize: (socketId: string, callback: Function) => {
-        const token = localStorage.getItem('token');
+      authorize: (socketId: string, callback: ChannelAuthorizationCallback) => {
+        const token = localStorage.getItem('token')
         fetch(`${import.meta.env.VITE_API_BASE_URL}/broadcasting/auth`, {
           method: 'POST',
           headers: {
@@ -30,15 +44,15 @@ const echo = new Echo({
           })
         })
         .then(response => response.json())
-        .then(data => {
-          callback(false, data);
+        .then((data: Parameters<ChannelAuthorizationCallback>[1]) => {
+          callback(null, data)
         })
-        .catch(error => {
-          callback(true, error);
-        });
+        .catch((error: Error) => {
+          callback(error, null)
+        })
       }
-    };
+    }
   },
-});
+})
 
-export default echo;
+export default echo
