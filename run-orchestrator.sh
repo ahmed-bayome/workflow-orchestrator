@@ -21,7 +21,7 @@ tell application "Terminal"
     
     # Tab 4: Frontend
     tell application "System Events" to keystroke "t" using command down
-    do script "cd '$DIR/frontend' && echo -n -e '\033]0;Orchestrator: Frontend\007' && npm run dev" in front window
+    do script "cd '$DIR/frontend' && echo -n -e '\033]0;Orchestrator: Frontend\007' && npm run dev -- --open" in front window
 end tell
 EOF
 
