@@ -55,6 +55,9 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/workflows/{id}', [WorkflowController::class, 'destroy']);
         Route::post('/workflows/{id}/activate', [WorkflowController::class, 'activate']);
         Route::post('/workflows/{id}/deactivate', [WorkflowController::class, 'deactivate']);
+
+        // Failed Jobs
+        Route::post('/jobs/{uuid}/retry', [WorkflowController::class, 'retryJob']);
     });
 });
 
