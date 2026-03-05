@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
-import type { PendingApproval } from '@/types'
+import echo from '@/services/echo'
+import type { PendingApproval, WorkflowRequest } from '@/types'
 
 export const useApprovalsStore = defineStore('approvals', () => {
   const pendingApprovals = ref<PendingApproval[]>([])
@@ -15,6 +16,17 @@ export const useApprovalsStore = defineStore('approvals', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  function subscribeToUpdates() {
+    echo.private('requests')
+      .listen('RequestUpdated', (_e: { request: WorkflowRequest }) => {
+        fetchPendingApprovals()
+      })
+  }
+
+  function unsubscribeFromUpdates() {
+    echo.leave('requests')
   }
 
   async function approveStep(requestId: number, stepId: number, comment?: string) {
@@ -31,6 +43,8 @@ export const useApprovalsStore = defineStore('approvals', () => {
     pendingApprovals,
     loading,
     fetchPendingApprovals,
+    subscribeToUpdates,
+    unsubscribeFromUpdates,
     approveStep,
     rejectStep,
   }

@@ -17,6 +17,11 @@ export const useRequestsStore = defineStore('requests', () => {
     } finally {
       loading.value = false
     }
+
+    echo.private('requests')
+      .listen('RequestUpdated', (e: { request: WorkflowRequest }) => {
+        updateRequestRealtime(e.request)
+      })
   }
 
   async function fetchRequestDetails(id: number) {
@@ -26,7 +31,7 @@ export const useRequestsStore = defineStore('requests', () => {
       currentRequest.value = response.data
 
       // Listen to updates for this specific request
-      echo.channel(`request.${id}`)
+      echo.private(`request.${id}`)
         .listen('RequestUpdated', (e: { request: WorkflowRequest }) => {
           currentRequest.value = e.request
         })
@@ -68,6 +73,10 @@ export const useRequestsStore = defineStore('requests', () => {
     echo.leave(`request.${requestId}`)
   }
 
+  function cleanupRequestsListener() {
+    echo.leave('requests')
+  }
+
   return {
     requests,
     currentRequest,
@@ -77,5 +86,6 @@ export const useRequestsStore = defineStore('requests', () => {
     createRequest,
     updateRequestRealtime,
     cleanupListeners,
+    cleanupRequestsListener,
   }
 })
