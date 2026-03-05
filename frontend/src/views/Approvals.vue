@@ -65,18 +65,17 @@ const handleAction = async (requestId: number, stepId: number, action: 'approve'
   }
 };
 
+import { useApprovalsStore } from '@/stores/approvals';
+
+const approvalsStore = useApprovalsStore();
+
 onMounted(() => {
   fetchPendingApprovals();
-
-  // Real-time updates for approvals list
-  echo.private('requests')
-    .listen('RequestUpdated', () => {
-      fetchPendingApprovals();
-    });
+  approvalsStore.subscribeToUpdates();
 });
 
 onUnmounted(() => {
-  echo.leave('requests');
+  approvalsStore.unsubscribeFromUpdates();
 });
 
 

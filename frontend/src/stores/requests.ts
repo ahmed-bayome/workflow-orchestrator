@@ -19,6 +19,13 @@ export const useRequestsStore = defineStore('requests', () => {
     }
 
     echo.private('requests')
+      .listen('RequestCreated', (e: { request: WorkflowRequest }) => {
+        // Only add to list if not already present
+        const exists = requests.value.find(r => r.id === e.request.id)
+        if (!exists) {
+          requests.value.unshift(e.request)
+        }
+      })
       .listen('RequestUpdated', (e: { request: WorkflowRequest }) => {
         updateRequestRealtime(e.request)
       })

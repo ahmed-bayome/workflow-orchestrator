@@ -60,6 +60,9 @@ class RequestController extends Controller
             // Dispatch job to create steps
             CreateRequestStepsJob::dispatch($workflowRequest->id);
 
+            // Broadcast to managers/admins immediately so their UI updates live
+            broadcast(new \App\Events\RequestCreated($workflowRequest->load('requester', 'workflowDefinition')))->toOthers();
+
             return response()->json($workflowRequest->load('workflowDefinition'), 201);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Request creation failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

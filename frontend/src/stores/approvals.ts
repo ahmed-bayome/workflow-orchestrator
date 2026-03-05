@@ -20,6 +20,9 @@ export const useApprovalsStore = defineStore('approvals', () => {
 
   function subscribeToUpdates() {
     echo.private('requests')
+      .listen('RequestCreated', (_e: { request: WorkflowRequest }) => {
+        fetchPendingApprovals()
+      })
       .listen('RequestUpdated', (_e: { request: WorkflowRequest }) => {
         fetchPendingApprovals()
       })

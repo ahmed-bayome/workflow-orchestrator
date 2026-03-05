@@ -25,6 +25,9 @@ const stats = ref({
 const recentRequests = ref<WorkflowRequest[]>([]);
 const isLoading = ref(true);
 
+import echo from '@/services/echo';
+import { onUnmounted } from 'vue';
+
 const fetchDashboardData = async () => {
   try {
     const [requestsRes, approvalsRes] = await Promise.all([
@@ -47,7 +50,22 @@ const fetchDashboardData = async () => {
   }
 };
 
-onMounted(fetchDashboardData);
+onMounted(() => {
+  fetchDashboardData();
+
+  echo.private('requests')
+    .listen('RequestCreated', () => {
+      // Re-fetch dashboard stats so pending counts update live
+      fetchDashboardData();
+    })
+    .listen('RequestUpdated', () => {
+      fetchDashboardData();
+    });
+});
+
+onUnmounted(() => {
+  echo.leave('requests');
+});
 
 const getStatusColor = (status: string) => {
   switch (status) {
