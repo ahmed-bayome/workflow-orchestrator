@@ -1,53 +1,40 @@
 # 🚀 Workflow Orchestrator
 
-A modern, full-stack workflow approval system designed for enterprise efficiency. Built with **Laravel 11** and **Vue 3**, this system allows organizations to define complex multi-step approval processes with dynamic forms and real-time notifications.
+A full-stack dynamic workflow approval system built with **Laravel 11** and **Vue 3**. Supports configurable approval pipelines (sequential, parallel, mixed), dynamic roles, real-time updates, and robust background processing.
 
 ---
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/f9b7da6c-a7a1-4a15-b7b0-4336bade511c" />
 
 ## ✨ Key Features
 
-- **Dynamic Workflow Engine**: Create custom workflows (e.g., Purchase Requests, Leave Requests) with flexible steps.
-- **Parallel & Sequential Approvals**: Support for `any` (first to approve) or `all` (unanimous) approval modes.
-- **Real-Time Updates**: Instant notifications and UI updates powered by **Laravel Reverb**.
-- **Role-Based Access Control (RBAC)**: Secure access management using **Spatie Laravel Permission**.
-- **Dynamic Form Schema**: Define request forms with diverse field types (text, number, select, date, textarea).
-- **Comprehensive Dashboard**: Dedicated views for Admins (Configuration), Employees (Requests), and Approvers (Pending Actions).
-
-## 🛠️ Tech Stack
-
-- **Backend**: Laravel 11, PHP 8.x, JWT Auth
-- **Frontend**: Vue 3, TypeScript, Vite, Tailwind CSS, Pinia
-- **Real-time**: Laravel Reverb (WebSockets)
-- **Database**: SQLite (default) or MySQL
+- **Dynamic Workflow Engine** — Create workflows (e.g. Purchase Requests, Leave Requests) with flexible multi-step pipelines
+- **Parallel & Sequential Approvals** — `any` (first to approve wins) or `all` (unanimous) approval modes per step
+- **Real-Time Updates** — Live UI updates powered by **Laravel Reverb** WebSockets
+- **Role-Based Access Control** — Dynamic roles via **Spatie Laravel Permission**
+- **Dynamic Form Schema** — Define request forms with text, number, select, date, and textarea fields
+- **Background Workers** — Jobs for orchestration, step processing, notifications, and failure handling
+- **Admin Tools** — Reports dashboard, failed job inspection and retry, user and role management
 
 ---
 
-## ⚡ Quick Start (Launch Everything)
+## 🛠️ Tech Stack
 
-We've made it incredibly simple to get started. Use our one-line launchers to start the API, Queue, WebSocket server, and Frontend all at once in a single tabbed terminal window.
-
-### **Windows**
-Run this from your root directory:
-```powershell
-.\run-orchestrator.bat
-```
-
-### **macOS / Linux**
-Run this from your root directory:
-```bash
-chmod +x run-orchestrator.sh
-./run-orchestrator.sh
-```
+| Layer | Technology |
+|---|---|
+| Backend | Laravel 11, PHP 8.2+, JWT Auth (tymon/jwt-auth) |
+| Frontend | Vue 3, TypeScript, Vite, Tailwind CSS, Pinia |
+| Real-time | Laravel Reverb (WebSockets) |
+| Database | SQLite (default) or MySQL |
+| Queue | Database driver (Redis-ready) |
+| RBAC | Spatie Laravel Permission |
 
 ---
 
 ## 🔑 Default Credentials
 
-The system comes pre-seeded with the following test accounts (Password: `password`):
+Seeded automatically on fresh install (password: `password`):
 
 | Role | Email |
-| :--- | :--- |
+|---|---|
 | **Admin** | `admin@test.com` |
 | **Manager** | `manager@test.com` |
 | **Employee** | `employee@test.com` |
@@ -55,83 +42,262 @@ The system comes pre-seeded with the following test accounts (Password: `passwor
 
 ---
 
-## 📖 Detailed Setup (Manual)
+## ⚡ Quick Start (All-in-One)
 
-If you prefer to run components manually, follow these steps:
+### Windows
+```powershell
+.\run-orchestrator.bat
+```
 
-### 1. Backend Setup
+### macOS / Linux
+```bash
+chmod +x run-orchestrator.sh && ./run-orchestrator.sh
+```
 
-Open a terminal in the `backend` directory:
+This opens 4 terminal tabs: API server, queue worker, Reverb server, and frontend.
+
+---
+
+## 📖 Manual Setup
+
+### 1. Backend
 
 ```bash
 cd backend
-```
-
-#### Configuration
-Ensure your `.env` file is configured.
-- **Database:** Set `DB_CONNECTION` (sqlite or mysql). If sqlite, ensure `database/database.sqlite` exists.
-- **Queue:** `QUEUE_CONNECTION=database`
-- **Broadcasting:**
-  - If using **Pusher**: Set `BROADCAST_CONNECTION=pusher` and fill `PUSHER_*` credentials.
-  - If using **Reverb** (Local): Set `BROADCAST_CONNECTION=reverb` and ensure `REVERB_*` vars are set.
-
-#### Installation & Database
-```bash
 composer install
+cp .env.example .env
 php artisan key:generate
 php artisan jwt:secret
+```
+
+Edit `.env`:
+```env
+DB_CONNECTION=sqlite          # or mysql
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=reverb
+MAIL_MAILER=log               # use smtp for real emails
+```
+
+```bash
 php artisan migrate:fresh --seed
 ```
 
-#### Start Servers
-You need to run these commands in separate terminals:
-
-**Terminal 1: API Server**
+Start the servers (each in a separate terminal):
 ```bash
-php artisan serve
+php artisan serve           # API on port 8000
+php artisan queue:work      # Background job worker
+php artisan reverb:start    # WebSocket server
 ```
 
-**Terminal 2: Queue Worker** (Processes background jobs)
-```bash
-php artisan queue:work
-```
-
-**Terminal 3: Reverb Server** (If using Reverb for real-time)
-```bash
-php artisan reverb:start
-```
-
----
-
-### 2. Frontend Setup
-
-Open a terminal in the `frontend` directory:
+### 2. Frontend
 
 ```bash
 cd frontend
+npm install
 ```
 
-#### Configuration
-Ensure `.env` matches your backend configuration.
-- `VITE_API_BASE_URL=http://localhost:8000/api`
-- If using **Reverb**:
-  ```env
-  VITE_WS_HOST=localhost
-  VITE_WS_PORT=8080
-  VITE_WS_KEY=... (matches backend REVERB_APP_KEY)
-  ```
+Edit `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_WS_HOST=localhost
+VITE_WS_PORT=8080
+VITE_WS_KEY=your_reverb_app_key
+```
 
-#### Installation & Run
 ```bash
-npm install
-npm run dev
+npm run dev     # Starts on http://localhost:5173
 ```
 
 ---
 
-## 💡 Usage Guide
+## 🧪 Running Tests
 
-1.  **Login**: Use the credentials provided above at `http://localhost:5173`.
-2.  **Admin Flow**: Go to Admin Dashboard -> Create Workflow (define fields, steps, and approvers).
-3.  **Employee Flow**: Go to Dashboard -> New Request -> Fill form -> Submit.
-4.  **Approver Flow**: Login as a Manager/Finance -> Go to Approvals -> Review and Approve/Reject.
+```bash
+cd backend && php artisan test
+```
+
+Expected output: **9 tests, 42 assertions, all passing**
+
+Test coverage includes:
+- Sequential workflow happy path
+- Parallel group — both steps must complete before advancing
+- `approval_mode: any` — first approval wins, second is blocked
+- `approval_mode: all` — all members must approve
+- Duplicate approval call idempotency
+- Failed job lands in DLQ
+- Admin can retry a failed job via API
+
+---
+
+## 🌱 Pump Test Data
+
+To quickly populate the UI with realistic data:
+
+```bash
+cd backend && php artisan test:pump-requests 20
+```
+
+This creates 20 requests with randomized payloads and auto-approves them through the pipeline. Refresh the UI to see results.
+
+---
+
+## 📡 Queue & Workers
+
+### Queue Driver
+Default: `database` (jobs stored in `jobs` table).
+For production, switch to Redis: `QUEUE_CONNECTION=redis`
+
+### Running Workers
+```bash
+# Development
+php artisan queue:work
+
+# Production (recommended)
+php artisan queue:work --queue=default --tries=3 --backoff=5
+
+# With Horizon (Redis only)
+php artisan horizon
+```
+
+### Failed Jobs (DLQ)
+Failed jobs are stored in the `failed_jobs` table after exhausting retries.
+
+```bash
+# List failed jobs
+php artisan queue:failed
+
+# Retry a specific job
+php artisan queue:retry <uuid>
+
+# Retry all failed jobs
+php artisan queue:retry all
+```
+
+Admin can also retry jobs from the UI at `/admin/failed-jobs`.
+
+### Retry Policies
+| Job | Tries | Backoff |
+|---|---|---|
+| CreateRequestStepsJob | 3 | 3s, 10s, 30s |
+| ProcessStepActionJob | 3 | 3s, 10s, 30s |
+| AdvanceWorkflowJob | 3 | 3s, 10s, 30s |
+| SendNotificationJob | 3 | 5s, 15s, 60s |
+
+---
+
+## 🗺️ API Reference
+
+### Auth
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login, returns JWT |
+| GET | `/api/auth/me` | Get current user |
+| POST | `/api/auth/logout` | Logout |
+
+### Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/users` | List all users |
+| POST | `/api/admin/users` | Create user |
+| PUT | `/api/admin/users/{id}` | Update user |
+| DELETE | `/api/admin/users/{id}` | Soft delete user |
+| POST | `/api/admin/users/{id}/restore` | Restore deleted user |
+| GET | `/api/admin/roles` | List roles |
+| POST | `/api/admin/roles` | Create role |
+| DELETE | `/api/admin/roles/{id}` | Delete role (fails if used in workflow) |
+| GET | `/api/admin/workflows` | List workflows |
+| POST | `/api/admin/workflows` | Create workflow |
+| PUT | `/api/admin/workflows/{id}` | Update workflow |
+| POST | `/api/admin/workflows/{id}/activate` | Activate workflow |
+| POST | `/api/admin/workflows/{id}/deactivate` | Deactivate workflow |
+| POST | `/api/admin/jobs/{uuid}/retry` | Retry a failed job |
+
+### Requests
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/requests` | List my requests |
+| POST | `/api/requests` | Submit new request |
+| GET | `/api/requests/{id}` | Get request detail |
+| GET | `/api/requests/{id}/pending` | Get currently pending steps |
+| POST | `/api/requests/{id}/admin/retry` | Admin retry failed request |
+
+### Approvals
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/approvals/pending` | List my pending approvals |
+| POST | `/api/requests/{id}/steps/{step_id}/approve` | Approve a step |
+| POST | `/api/requests/{id}/steps/{step_id}/reject` | Reject a step |
+
+### Reports
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/reports/requests` | Request stats by status |
+
+---
+
+## 🔄 Workflow Definition Format
+
+```json
+{
+  "name": "Purchase Request",
+  "form_schema": {
+    "fields": [
+      { "id": "amount", "label": "Amount", "type": "number", "required": true },
+      { "id": "reason", "label": "Reason", "type": "textarea", "required": true }
+    ]
+  },
+  "steps": [
+    {
+      "name": "Manager Approval",
+      "role_id": 2,
+      "execution_group": "group_1",
+      "approval_mode": "any",
+      "order": 1
+    },
+    {
+      "name": "Finance Review",
+      "role_id": 3,
+      "execution_group": "group_2",
+      "approval_mode": "all",
+      "order": 2
+    },
+    {
+      "name": "Legal Review",
+      "role_id": 4,
+      "execution_group": "group_2",
+      "approval_mode": "any",
+      "order": 2
+    }
+  ]
+}
+```
+
+Steps with the same `execution_group` run **in parallel**. Steps with different groups run **sequentially**. The pipeline only advances to the next group once all steps in the current group are complete.
+
+---
+
+## 🧠 Design Decisions
+
+### Role Membership: Snapshot at Creation
+When a request is submitted, the list of approvers for each step is **snapshotted** from current role members. Changes to role membership after submission do not affect in-flight requests. This ensures consistency and auditability.
+
+### Real-Time: Reverb instead of Firebase
+Laravel Reverb was chosen over Firebase for self-hosted simplicity, tighter Laravel integration, and no external dependency. The architecture is Firebase-compatible — the broadcasting interface can be swapped by changing `BROADCAST_CONNECTION=pusher` and pointing to Firebase via a Pusher-compatible adapter.
+
+### Soft Deletes for Users
+Deleted users are soft-deleted (`deleted_at` timestamp). All historical records (step actions, approvals) remain intact and reference the user ID. The user cannot log in but their history is preserved.
+
+### Idempotency
+`ProcessStepActionJob` checks for an existing `StepAction` record before writing. `AdvanceWorkflowJob` uses `SELECT ... FOR UPDATE` row locking to prevent race conditions during concurrent approvals.
+
+---
+
+## 🤖 AI Usage
+
+This project was built with heavy assistance from **Gemini CLI** and **Claude (Anthropic)**:
+
+- **Gemini CLI** was used to scaffold controllers, jobs, migrations, Vue components, and implement features incrementally via targeted prompts
+- **Claude** was used for architecture review, identifying missing requirements, writing focused prompts for Gemini, and reviewing correctness of generated code
+- All generated code was reviewed, tested, and adjusted manually
+- The overall architecture, design decisions, and edge case handling were human-directed
