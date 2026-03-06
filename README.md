@@ -150,13 +150,18 @@ Test coverage includes:
 
 ## 🌱 Pump Test Data
 
-To quickly populate the UI with realistic data:
+To quickly populate the UI with realistic English data (users and requests at various stages):
 
 ```bash
-cd backend && php artisan test:pump-requests 20
+cd backend && php artisan db:seed --class=DataPumpSeeder
 ```
 
-This creates 20 requests with randomized payloads and auto-approves them through the pipeline. Refresh the UI to see results.
+This creates:
+- 15 additional staff users with random roles
+- 50 realistic requests (Purchase and Leave) with natural English payloads
+- Randomly processes some requests to different stages (approved, rejected, in-progress)
+
+Refresh the UI after running to see the updated dashboard and reports.
 
 ---
 
