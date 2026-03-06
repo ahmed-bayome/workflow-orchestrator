@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import api from '../services/api';
 import echo from '../services/echo';
 import {
@@ -14,26 +15,61 @@ import {
   Activity,
   MessageSquare,
   Shield,
-  Loader2
+  Loader2,
+  RefreshCcw,
+  Users
 } from 'lucide-vue-next';
 import { format } from 'date-fns';
 import type { WorkflowRequest, RequestStep } from '@/types';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const request = ref<WorkflowRequest | null>(null);
+const pendingSteps = ref<any[]>([]);
 const isLoading = ref(true);
+const isRetrying = ref(false);
 const error = ref('');
+const retrySuccess = ref('');
+const retryError = ref('');
 
 const fetchRequestDetails = async () => {
   try {
     const response = await api.get<WorkflowRequest>(`/requests/${route.params.id}`);
     request.value = response.data;
+    if (request.value.status !== 'approved' && request.value.status !== 'rejected') {
+      fetchPendingSteps();
+    }
   } catch (err) {
     console.error('Error fetching request details:', err);
     error.value = 'Failed to load request details.';
   } finally {
     isLoading.value = false;
+  }
+};
+
+const fetchPendingSteps = async () => {
+  try {
+    const response = await api.get<any[]>(`/requests/${route.params.id}/pending`);
+    pendingSteps.value = response.data;
+  } catch (err) {
+    console.error('Error fetching pending steps:', err);
+  }
+};
+
+const handleAdminRetry = async () => {
+  if (isRetrying.value) return;
+  isRetrying.value = true;
+  retrySuccess.value = '';
+  retryError.value = '';
+  try {
+    await api.post(`/requests/${route.params.id}/admin/retry`);
+    retrySuccess.value = 'Request queued for retry successfully.';
+    await fetchRequestDetails();
+  } catch (err: any) {
+    retryError.value = err.response?.data?.error || 'Failed to retry request.';
+  } finally {
+    isRetrying.value = false;
   }
 };
 
@@ -83,6 +119,32 @@ const getStepIcon = (status: string) => {
 
 <template>
   <div class="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <!-- Admin Retry Banner -->
+    <div v-if="authStore.isAdmin && request?.status === 'failed'" class="bg-red-50 border-2 border-red-100 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+      <div class="flex items-center gap-4 text-red-700">
+        <div class="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-600">
+          <AlertCircle class="w-6 h-6" />
+        </div>
+        <div>
+          <h3 class="text-lg font-black tracking-tight leading-none mb-1">Execution Failed</h3>
+          <p class="text-sm font-medium opacity-80 text-red-600">This request encountered a system error during processing.</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <p v-if="retrySuccess" class="text-xs font-bold text-emerald-600 animate-in fade-in slide-in-from-right-2">{{ retrySuccess }}</p>
+        <p v-if="retryError" class="text-xs font-bold text-red-600 animate-in fade-in slide-in-from-right-2">{{ retryError }}</p>
+        <button 
+          @click="handleAdminRetry"
+          class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-200 flex items-center gap-2 disabled:opacity-50"
+          :disabled="isRetrying"
+        >
+          <RefreshCcw class="w-4 h-4" :class="{ 'animate-spin': isRetrying }" />
+          Retry Request
+        </button>
+      </div>
+    </div>
+
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
       <div class="flex items-center gap-4">
@@ -174,6 +236,41 @@ const getStepIcon = (status: string) => {
                   <div class="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.4)]"></div>
                   <span class="text-base font-bold text-slate-900 tracking-tight">
                     {{ request.payload[field.id] || 'N/A' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pending Steps (Waiting On) -->
+        <section v-if="request.status !== 'approved' && request.status !== 'rejected' && pendingSteps.length > 0" class="bg-indigo-50/50 rounded-[2rem] border-2 border-indigo-100/50 p-8 space-y-6">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
+              <Users class="w-6 h-6" />
+            </div>
+            <div>
+              <h2 class="text-xl font-black text-slate-900 leading-none mb-1">Currently Waiting On</h2>
+              <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest">Active Approval Requirements</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-for="step in pendingSteps" :key="step.id" class="bg-white p-6 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-between">
+              <div>
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-2">Target Step</p>
+                <h4 class="font-bold text-slate-900 text-lg mb-4">{{ step.step_definition?.name || 'Workflow Step' }}</h4>
+              </div>
+              
+              <div class="space-y-3 pt-4 border-t border-slate-50">
+                <div class="flex items-center gap-3">
+                  <Shield class="w-4 h-4 text-slate-400" />
+                  <span class="text-sm font-bold text-slate-600">{{ step.role?.name }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <Activity class="w-4 h-4 text-slate-400" />
+                  <span class="text-[11px] font-black uppercase tracking-tight text-slate-400">
+                    {{ step.approval_mode === 'all' ? 'All approvers must approve' : 'Any approver can approve' }}
                   </span>
                 </div>
               </div>

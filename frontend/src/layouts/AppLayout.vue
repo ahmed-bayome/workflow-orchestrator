@@ -9,7 +9,9 @@ import {
   Shield,
   LogOut,
   Workflow,
-  Menu
+  Menu,
+  BarChart3,
+  AlertCircle
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted } from 'vue';
 
@@ -33,6 +35,8 @@ const adminItems = [
   { name: 'Workflows', path: '/admin/workflows', icon: Workflow },
   { name: 'Users', path: '/admin/users', icon: Users },
   { name: 'Roles', path: '/admin/roles', icon: Shield },
+  { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
+  { name: 'Failed Jobs', path: '/admin/failed-jobs', icon: AlertCircle },
 ];
 
 // Close mobile menu on route change

@@ -55,9 +55,13 @@ class RoleController extends Controller
     {
         $role = Role::findOrFail($id);
 
-        if (!$role->canBeDeleted()) {
+        $isUsed = \App\Models\WorkflowDefinition::all()->contains(function ($workflow) use ($id) {
+            return $workflow->usesRole($id);
+        });
+
+        if ($isUsed) {
             return response()->json([
-                'error' => 'Cannot delete role that is used in active workflows'
+                'error' => 'Cannot delete role that is used in a workflow definition.'
             ], 400);
         }
 

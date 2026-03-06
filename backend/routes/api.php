@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\WorkflowController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RequestController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -24,6 +25,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/requests', [RequestController::class, 'index']);
     Route::post('/requests', [RequestController::class, 'store']);
     Route::get('/requests/{id}', [RequestController::class, 'show']);
+
+    // Reports
+    Route::get('/reports/requests', [ReportController::class, 'index']);
+    Route::get('/requests/{id}/pending', [RequestController::class, 'pending']);
 
     // Approvals
     Route::get('/approvals/pending', [ApprovalController::class, 'pendingApprovals']);
@@ -58,6 +63,7 @@ Route::middleware('auth:api')->group(function () {
 
         // Failed Jobs
         Route::post('/jobs/{uuid}/retry', [WorkflowController::class, 'retryJob']);
+        Route::post('/requests/{id}/admin/retry', [RequestController::class, 'adminRetry']);
     });
 });
 

@@ -33,14 +33,12 @@ class SendNotificationJob implements ShouldQueue
             return;
         }
 
-        // Here you can send email, push notification, etc.
-        // For now, just log it
+        // Send email
+        Mail::to($user->email)->send(new \App\Mail\WorkflowNotificationMail($this->type, $this->data));
+
         Log::info("Notification sent to {$user->email}", [
             'type' => $this->type,
             'data' => $this->data,
         ]);
-
-        // Example: Send email
-        // Mail::to($user->email)->send(new \App\Mail\NotificationMail($this->type, $this->data));
     }
 }

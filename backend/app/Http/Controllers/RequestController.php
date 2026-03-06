@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\CreateRequestStepsJob;
+use App\Jobs\AdvanceWorkflowJob;
 use App\Models\WorkflowRequest;
 use App\Models\WorkflowDefinition;
 use Illuminate\Http\Request;
@@ -80,5 +81,33 @@ class RequestController extends Controller
         ])->findOrFail($id);
 
         return response()->json($request);
+    }
+
+    public function adminRetry($id)
+    {
+        $request = WorkflowRequest::findOrFail($id);
+
+        if ($request->status !== 'failed') {
+            return response()->json(['error' => 'Only failed requests can be retried'], 400);
+        }
+
+        $request->update(['status' => 'in_progress']);
+
+        AdvanceWorkflowJob::dispatch($request->id);
+
+        return response()->json(['message' => 'Request queued for retry']);
+    }
+
+    public function pending($id)
+    {
+        $request = WorkflowRequest::findOrFail($id);
+
+        $pendingSteps = $request->steps()
+            ->where('status', 'pending')
+            ->where('execution_group', $request->current_execution_group)
+            ->with('role')
+            ->get();
+
+        return response()->json($pendingSteps);
     }
 }
