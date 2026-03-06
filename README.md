@@ -3,6 +3,7 @@
 A modern, full-stack workflow approval system designed for enterprise efficiency. Built with **Laravel 11** and **Vue 3**, this system allows organizations to define complex multi-step approval processes with dynamic forms and real-time notifications.
 
 ---
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/f9b7da6c-a7a1-4a15-b7b0-4336bade511c" />
 
 ## ✨ Key Features
 
