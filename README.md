@@ -13,6 +13,7 @@ A full-stack dynamic workflow approval system built with **Laravel 11** and **Vu
 - **Dynamic Form Schema** — Define request forms with text, number, select, date, and textarea fields
 - **Background Workers** — Jobs for orchestration, step processing, notifications, and failure handling
 - **Admin Tools** — Reports dashboard, failed job inspection and retry, user and role management
+<img width="1536" height="511" alt="unnamed" src="https://github.com/user-attachments/assets/3132143a-8bf0-4891-a79c-1ab0ea4d73a9" />
 
 ---
 
@@ -107,6 +108,24 @@ VITE_WS_KEY=your_reverb_app_key
 ```bash
 npm run dev     # Starts on http://localhost:5173
 ```
+
+---
+
+## 🔄 Reset & Re-Seed Database
+
+If you want to wipe all data and start fresh with the default seed data (roles, users, sample workflows), run this from the root directory:
+
+### Windows
+```powershell
+.\reset-db.bat
+```
+
+### macOS / Linux
+```bash
+chmod +x reset-db.sh && ./reset-db.sh
+```
+
+This runs `php artisan migrate:fresh --seed` inside the `backend` directory, restoring all default credentials and sample workflows. Useful when testing or after pumping test data.
 
 ---
 
