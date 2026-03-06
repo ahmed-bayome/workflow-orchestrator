@@ -1,4 +1,4 @@
-# 🚀 Workflow Orchestrator
+# 🚀 Dynamic Workflow Orchestrator
 
 A full-stack dynamic workflow approval system built with **Laravel 11** and **Vue 3**. Supports configurable approval pipelines (sequential, parallel, mixed), dynamic roles, real-time updates, and robust background processing.
 ---
