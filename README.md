@@ -3,6 +3,7 @@
 A full-stack dynamic workflow approval system built with **Laravel 11** and **Vue 3**. Supports configurable approval pipelines (sequential, parallel, mixed), dynamic roles, real-time updates, and robust background processing.
 
 ---
+<img width="1536" height="511" alt="unnamed" src="https://github.com/user-attachments/assets/1b865aeb-a68a-4627-b64f-29c382e148d4" />
 
 ## ✨ Key Features
 
@@ -126,20 +127,6 @@ Test coverage includes:
 - Duplicate approval call idempotency
 - Failed job lands in DLQ
 - Admin can retry a failed job via API
-
----
-
-## 🌱 Pump Test Data
-
-To quickly populate the UI with realistic data:
-
-```bash
-cd backend && php artisan test:pump-requests 20
-```
-
-This creates 20 requests with randomized payloads and auto-approves them through the pipeline. Refresh the UI to see results.
-
----
 
 ## 📡 Queue & Workers
 
