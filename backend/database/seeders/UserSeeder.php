@@ -21,7 +21,7 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
-            $user = User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
                     'name' => $userData['name'],
@@ -30,7 +30,8 @@ class UserSeeder extends Seeder
                 ]
             );
 
-            $user->assignRole($userData['role']);
+            // Sync roles to avoid duplicates if already assigned
+            $user->syncRoles([$userData['role']]);
         }
     }
 }

@@ -62,6 +62,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/workflows/{id}/deactivate', [WorkflowController::class, 'deactivate']);
 
         // Failed Jobs
+        Route::get('/failed-jobs', [WorkflowController::class, 'failedJobs']);
         Route::post('/jobs/{uuid}/retry', [WorkflowController::class, 'retryJob']);
         Route::post('/requests/{id}/admin/retry', [RequestController::class, 'adminRetry']);
     });

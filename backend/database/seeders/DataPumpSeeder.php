@@ -19,6 +19,9 @@ class DataPumpSeeder extends Seeder
      */
     public function run(): void
     {
+        // Disable broadcasting during the pump to avoid errors if Reverb/WebSocket server is down
+        config(['broadcasting.default' => 'null']);
+
         $faker = Faker::create();
 
         $this->command->info('Starting Realistic Data Pump...');
@@ -34,7 +37,7 @@ class DataPumpSeeder extends Seeder
         // 2. Create a small set of additional users (15)
         $this->command->info('Creating 15 additional users...');
         for ($i = 0; $i < 15; $i++) {
-            $user = User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => "staff{$i}@company.com"],
                 [
                     'name' => $faker->name,
@@ -47,9 +50,9 @@ class DataPumpSeeder extends Seeder
 
         $allUsers = User::all();
 
-        // 3. Create 50 realistic requests
-        $requestCount = 50;
-        $this->command->info("Generating {$requestCount} realistic workflow requests...");
+        // 3. Create 100 realistic requests
+        $requestCount = 100;
+        $this->command->info("Generating {$requestCount} realistic workflow requests with random statuses...");
 
         for ($i = 0; $i < $requestCount; $i++) {
             $definition = $definitions->random();
@@ -69,11 +72,23 @@ class DataPumpSeeder extends Seeder
                 'status' => 'pending',
             ]);
 
-            // Sync job to create steps
-            (new CreateRequestStepsJob($request->id))->handle();
+            // Determine target status
+            $targetStatus = $faker->randomElement(['pending', 'in_progress', 'approved', 'rejected', 'failed']);
 
-            // Randomly advance
-            $this->randomlyProcessRequest($request, $faker);
+            if ($targetStatus !== 'pending') {
+                // Sync job to create steps
+                (new CreateRequestStepsJob($request->id))->handle();
+                
+                if ($targetStatus === 'failed') {
+                    $request->update([
+                        'status' => 'failed',
+                        'completed_at' => now(),
+                    ]);
+                } else if ($targetStatus !== 'in_progress' || $faker->boolean(70)) {
+                    // Randomly advance or fully advance based on target
+                    $this->processToStatus($request, $targetStatus, $faker);
+                }
+            }
 
             if ($i % 10 === 0) {
                 $this->command->info("Progress: {$i}/{$requestCount}");
@@ -118,26 +133,44 @@ class DataPumpSeeder extends Seeder
             ];
         }
 
+        if ($workflowName === 'Hiring Requisition') {
+            $titles = ['Senior Frontend Engineer', 'Product Manager', 'UX Designer', 'DevOps Specialist', 'Marketing Coordinator', 'Sales Executive'];
+            $dept = $faker->randomElement(['engineering', 'marketing', 'sales', 'customer_success']);
+            $salary = $faker->randomElement(['$70k - $90k', '$100k - $130k', '$140k - $180k', '$50k - $70k']);
+            
+            return [
+                'job_title' => $faker->randomElement($titles),
+                'department' => $dept,
+                'salary_range' => $salary,
+            ];
+        }
+
         return [];
     }
 
-    private function randomlyProcessRequest(WorkflowRequest $request, $faker)
+    private function processToStatus(WorkflowRequest $request, $targetStatus, $faker)
     {
-        $progressLevel = $faker->numberBetween(0, 2);
-        if ($progressLevel === 0) return;
-
         $request->refresh();
         $iteration = 0;
 
-        while ($request->status === 'in_progress' && $iteration < 5) {
+        while ($request->status === 'in_progress' && $iteration < 20) {
             $iteration++;
             $currentSteps = $request->currentSteps();
             if ($currentSteps->isEmpty()) break;
 
             foreach ($currentSteps as $step) {
-                $isRejection = $faker->boolean(15); // 15% rejection rate
-                $action = $isRejection ? 'reject' : 'approve';
-                $comment = $isRejection 
+                $action = 'approve';
+                
+                if ($targetStatus === 'rejected' && $faker->boolean(30)) {
+                    $action = 'reject';
+                }
+                
+                // If we are just "in_progress" target, we might stop halfway
+                if ($targetStatus === 'in_progress' && $faker->boolean(40)) {
+                    return;
+                }
+
+                $comment = $action === 'reject' 
                     ? $faker->randomElement(['Budget constraints', 'Missing documentation', 'Please provide more details', 'Not approved at this time'])
                     : $faker->randomElement(['Looks good', 'Approved for processing', 'Proceed with the next steps', 'Checked and verified']);
 
@@ -148,7 +181,7 @@ class DataPumpSeeder extends Seeder
                     $approver = $potentialApprovers->random();
                     (new ProcessStepActionJob($step->id, $approver->id, $action, $comment))->handle();
                 } else {
-                    if ($isRejection) {
+                    if ($action === 'reject') {
                         $approver = $potentialApprovers->random();
                         (new ProcessStepActionJob($step->id, $approver->id, 'reject', $comment))->handle();
                     } else {
@@ -157,9 +190,13 @@ class DataPumpSeeder extends Seeder
                         }
                     }
                 }
+
+                // If we rejected, the request status will change to 'rejected' via AdvanceWorkflowJob
+                $request->refresh();
+                if ($request->status === 'rejected') return;
             }
             $request->refresh();
-            if ($progressLevel === 1 && $faker->boolean(50)) break;
         }
     }
+
 }

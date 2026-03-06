@@ -104,19 +104,40 @@ class WorkflowController extends Controller
         return response()->json(['message' => 'Workflow deleted successfully']);
     }
 
+    public function failedJobs()
+    {
+        $jobs = \Illuminate\Support\Facades\DB::table('failed_jobs')
+            ->orderBy('failed_at', 'desc')
+            ->get()
+            ->map(function ($job) {
+                // Try to extract a clean job name from the payload
+                $payload = json_decode($job->payload, true);
+                $jobName = $payload['displayName'] ?? ($payload['job'] ?? 'Unknown Job');
+                
+                return [
+                    'uuid' => $job->uuid,
+                    'job' => $jobName,
+                    'exception' => $job->exception,
+                    'failed_at' => $job->failed_at,
+                ];
+            });
+
+        return response()->json($jobs);
+    }
+
     public function retryJob($uuid)
     {
-        // Simple implementation to satisfy the test
-        $failedJob = \Illuminate\Support\Facades\DB::table('failed_jobs')
+        $exists = \Illuminate\Support\Facades\DB::table('failed_jobs')
             ->where('uuid', $uuid)
-            ->first();
+            ->exists();
 
-        if (!$failedJob) {
+        if (!$exists) {
             return response()->json(['error' => 'Job not found'], 404);
         }
 
-        // Normally we'd call Artisan::call('queue:retry', ['id' => $uuid])
-        // or similar, but for the test, we just return success.
+        \Illuminate\Support\Facades\Artisan::call('queue:retry', [
+            'id' => [$uuid]
+        ]);
         
         return response()->json(['message' => 'Job queued for retry']);
     }
