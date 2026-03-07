@@ -119,7 +119,11 @@ Refresh the UI after running to see the updated dashboard and reports.
 ## 🧪 Running Tests
 
 ```bash
+# macOS / Linux
 cd backend && php artisan test
+
+# Windows
+cd backend; php artisan test
 ```
 
 Expected output: **9 tests, 42 assertions, all passing**
