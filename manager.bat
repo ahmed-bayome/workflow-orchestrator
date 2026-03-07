@@ -214,43 +214,72 @@ echo   ^>^> Full setup started...
 echo   ^>^> Checking required tools...
 echo.
 
+:: ── Write installer scripts via PowerShell (avoids batch echo corruption) ──
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$php = @'" ^
+  "$ErrorActionPreference = 'Stop'" ^
+  "$zip = Join-Path $env:TEMP 'php.zip'" ^
+  "$dst = 'C:\php'" ^
+  "Write-Host '  Finding latest PHP 8.3...'" ^
+  "$page = Invoke-WebRequest -Uri 'https://windows.php.net/downloads/releases/' -UseBasicParsing" ^
+  "$file = ($page.Links.href | Where-Object { $_ -match 'php-8\.3\.\d+-Win32-vs16-x64\.zip$' } | Select-Object -First 1)" ^
+  "if (-not $file) { throw 'Could not find PHP 8.3 zip' }" ^
+  "$url = 'https://windows.php.net/downloads/releases/' + $file" ^
+  "Write-Host ('  Downloading ' + $file + ' ...')" ^
+  "Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing" ^
+  "Write-Host '  Extracting...'" ^
+  "Expand-Archive -Path $zip -DestinationPath $dst -Force" ^
+  "Remove-Item $zip" ^
+  "Copy-Item ($dst + '\php.ini-development') ($dst + '\php.ini')" ^
+  "$ini = Get-Content ($dst + '\php.ini')" ^
+  "$ini = $ini -replace ';extension=mbstring','extension=mbstring'" ^
+  "$ini = $ini -replace ';extension=openssl','extension=openssl'" ^
+  "$ini = $ini -replace ';extension=pdo_sqlite','extension=pdo_sqlite'" ^
+  "$ini = $ini -replace ';extension=sqlite3','extension=sqlite3'" ^
+  "$ini = $ini -replace ';extension=curl','extension=curl'" ^
+  "$ini = $ini -replace ';extension=zip','extension=zip'" ^
+  "$ini = $ini -replace ';extension=fileinfo','extension=fileinfo'" ^
+  "$ini | Set-Content ($dst + '\php.ini')" ^
+  "$sp = [System.Environment]::GetEnvironmentVariable('PATH','Machine')" ^
+  "if ($sp -notlike '*C:\php*') { [System.Environment]::SetEnvironmentVariable('PATH', $sp + ';C:\php', 'Machine') }" ^
+  "Write-Host '  v  PHP ready.'" ^
+  "'@; $php | Set-Content '$env:TEMP\install_php.ps1'"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$comp = @'" ^
+  "Invoke-WebRequest -Uri 'https://getcomposer.org/composer.phar' -OutFile 'C:\php\composer.phar' -UseBasicParsing" ^
+  "Set-Content -Path 'C:\php\composer.bat' -Value '@php C:\php\composer.phar %*'" ^
+  "Write-Host '  v  Composer ready.'" ^
+  "'@; $comp | Set-Content '$env:TEMP\install_composer.ps1'"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$node = @'" ^
+  "$ErrorActionPreference = 'Stop'" ^
+  "$msi = Join-Path $env:TEMP 'node.msi'" ^
+  "Write-Host '  Finding latest Node.js LTS...'" ^
+  "$idx = Invoke-WebRequest -Uri 'https://nodejs.org/dist/latest-v22.x/' -UseBasicParsing" ^
+  "$file = ($idx.Links.href | Where-Object { $_ -match 'node-v[\d.]+-x64\.msi$' } | Select-Object -First 1)" ^
+  "if (-not $file) { throw 'Could not find Node.js MSI' }" ^
+  "$url = 'https://nodejs.org/dist/latest-v22.x/' + $file" ^
+  "Write-Host ('  Downloading ' + $file + ' ...')" ^
+  "Invoke-WebRequest -Uri $url -OutFile $msi -UseBasicParsing" ^
+  "Write-Host '  Installing (may take a minute)...'" ^
+  "Start-Process msiexec -ArgumentList '/i',$msi,'/qn','/norestart' -Wait" ^
+  "Remove-Item $msi" ^
+  "Write-Host '  v  Node.js ready.'" ^
+  "'@; $node | Set-Content '$env:TEMP\install_node.ps1'"
+
 :: ── PHP ──────────────────────────────────────────────────────
 where php >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo   ^>^> PHP not found. Downloading PHP 8.3...
-    echo $ErrorActionPreference = 'Stop' > "%TEMP%\install_php.ps1"
-    echo $zip = Join-Path $env:TEMP 'php.zip' >> "%TEMP%\install_php.ps1"
-    echo $dst = 'C:\php' >> "%TEMP%\install_php.ps1"
-    echo Write-Host '  Finding latest PHP 8.3 build...' >> "%TEMP%\install_php.ps1"
-    echo $page = Invoke-WebRequest -Uri 'https://windows.php.net/downloads/releases/' -UseBasicParsing >> "%TEMP%\install_php.ps1"
-    echo $file = ($page.Links.href ^| Where-Object { $_ -match 'php-8\.3\.\d+-Win32-vs16-x64\.zip$' } ^| Select-Object -First 1) >> "%TEMP%\install_php.ps1"
-    echo if (-not $file) { throw 'Could not find PHP 8.3 download link' } >> "%TEMP%\install_php.ps1"
-    echo $url = 'https://windows.php.net/downloads/releases/' + $file >> "%TEMP%\install_php.ps1"
-    echo Write-Host "  Downloading $file ..." >> "%TEMP%\install_php.ps1"
-    echo Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing >> "%TEMP%\install_php.ps1"
-    echo Write-Host '  Extracting to C:\php ...' >> "%TEMP%\install_php.ps1"
-    echo Expand-Archive -Path $zip -DestinationPath $dst -Force >> "%TEMP%\install_php.ps1"
-    echo Remove-Item $zip >> "%TEMP%\install_php.ps1"
-    echo Copy-Item "$dst\php.ini-development" "$dst\php.ini" >> "%TEMP%\install_php.ps1"
-    echo $ini = Get-Content "$dst\php.ini" >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=mbstring','extension=mbstring' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=openssl','extension=openssl' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=pdo_sqlite','extension=pdo_sqlite' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=sqlite3','extension=sqlite3' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=curl','extension=curl' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=zip','extension=zip' >> "%TEMP%\install_php.ps1"
-    echo $ini = $ini -replace ';extension=fileinfo','extension=fileinfo' >> "%TEMP%\install_php.ps1"
-    echo $ini ^| Set-Content "$dst\php.ini" >> "%TEMP%\install_php.ps1"
-    echo $syspath = [System.Environment]::GetEnvironmentVariable('PATH','Machine') >> "%TEMP%\install_php.ps1"
-    echo if ($syspath -notlike '*C:\php*') { [System.Environment]::SetEnvironmentVariable('PATH', $syspath + ';C:\php', 'Machine') } >> "%TEMP%\install_php.ps1"
-    echo Write-Host '  v  PHP ready.' >> "%TEMP%\install_php.ps1"
     powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\install_php.ps1"
     if %ERRORLEVEL% neq 0 (
         echo   x  PHP install failed. Please install manually: https://www.php.net/downloads
         pause & goto MENU
     )
     set "PATH=%PATH%;C:\php"
-    echo   v  PHP installed to C:\php
+    echo   v  PHP installed.
 ) else (
     for /f "tokens=*" %%v in ('php -r "echo PHP_VERSION;"') do echo   v  PHP: %%v already installed.
 )
@@ -259,9 +288,6 @@ if %ERRORLEVEL% neq 0 (
 where composer >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo   ^>^> Composer not found. Downloading...
-    echo Invoke-WebRequest -Uri 'https://getcomposer.org/composer.phar' -OutFile 'C:\php\composer.phar' -UseBasicParsing > "%TEMP%\install_composer.ps1"
-    echo Set-Content -Path 'C:\php\composer.bat' -Value '@php C:\php\composer.phar %%*' >> "%TEMP%\install_composer.ps1"
-    echo Write-Host '  v  Composer ready.' >> "%TEMP%\install_composer.ps1"
     powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\install_composer.ps1"
     if %ERRORLEVEL% neq 0 (
         echo   x  Composer install failed.
@@ -276,22 +302,7 @@ if %ERRORLEVEL% neq 0 (
 :: ── Node.js ──────────────────────────────────────────────────
 where node >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo   ^>^> Node.js not found. Downloading Node.js LTS...
-    echo $ErrorActionPreference = 'Stop' > "%TEMP%\install_node.ps1"
-    echo $msi = Join-Path $env:TEMP 'node.msi' >> "%TEMP%\install_node.ps1"
-    echo Write-Host '  Finding latest Node.js LTS...' >> "%TEMP%\install_node.ps1"
-    echo $index = Invoke-WebRequest -Uri 'https://nodejs.org/dist/latest-v22.x/' -UseBasicParsing >> "%TEMP%\install_node.ps1"
-    echo $file = ($index.Links.href ^| Where-Object { $_ -match 'node-v.*-x64\.msi$' } ^| Select-Object -First 1) >> "%TEMP%\install_node.ps1"
-    echo if (-not $file) { throw 'Could not find Node.js MSI' } >> "%TEMP%\install_node.ps1"
-    echo $url = 'https://nodejs.org/dist/latest-v22.x/' + $file >> "%TEMP%\install_node.ps1"
-    echo Write-Host "  Downloading $file ..." >> "%TEMP%\install_node.ps1"
-    echo Invoke-WebRequest -Uri $url -OutFile $msi -UseBasicParsing >> "%TEMP%\install_node.ps1"
-    echo Write-Host '  Installing (this may take a minute)...' >> "%TEMP%\install_node.ps1"
-    echo Start-Process msiexec -ArgumentList '/i',$msi,'/qn','/norestart' -Wait >> "%TEMP%\install_node.ps1"
-    echo Remove-Item $msi >> "%TEMP%\install_node.ps1"
-    echo $p = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User') >> "%TEMP%\install_node.ps1"
-    echo [System.Environment]::SetEnvironmentVariable('PATH', $p, 'Process') >> "%TEMP%\install_node.ps1"
-    echo Write-Host '  v  Node.js ready.' >> "%TEMP%\install_node.ps1"
+    echo   ^>^> Node.js not found. Downloading...
     powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\install_node.ps1"
     if %ERRORLEVEL% neq 0 (
         echo   x  Node.js install failed. Please install manually: https://nodejs.org
