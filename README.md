@@ -104,18 +104,6 @@ Everything is managed through a single file: **`manager.bat`**
 
 ---
 
-## 🌱 Pump Test Data
-
-Option `[4] Pump data` runs the `DataPumpSeeder`, which creates:
-
-- 15 additional staff users with random roles
-- 50 realistic requests (Purchase and Leave) with natural English payloads
-- Some requests randomly processed to different stages (approved, rejected, in-progress)
-
-Refresh the UI after running to see the updated dashboard and reports.
-
----
-
 ## 🧪 Running Tests
 
 ```bash
