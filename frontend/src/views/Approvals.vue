@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import api from '../services/api';
-import echo from '../services/echo';
 import {
   CheckCircle2,
   XCircle,

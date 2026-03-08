@@ -5,8 +5,7 @@ import {
   AlertCircle, 
   RefreshCcw, 
   Loader2,
-  CheckCircle2,
-  XCircle
+  CheckCircle2
 } from 'lucide-vue-next';
 
 interface FailedJob {
