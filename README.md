@@ -58,18 +58,23 @@ Choose **Option 1** for first-time setup, then **Option 2** to run.
 
 ---
 
-## 📖 Manual Installation (Fallback)
+## 📖 Manual Installation (A to Z Guide)
 
-If you cannot run the automated scripts, follow these steps to set up the project manually.
+If you are on a fresh machine (like a Windows Sandbox) and cannot run the automated scripts, follow this exact sequence of commands.
 
-### 1. Prerequisites
-Ensure you have the following installed on your system:
-- **PHP 8.2+** (with `pdo_sqlite`, `mbstring`, `openssl`, and `curl` extensions enabled)
-- **Composer**
-- **Node.js 20+ & npm**
-- **SQLite**
+### 1. Install Prerequisites (Windows / winget)
+If you don't have the tools installed, run these in an **Administrator** terminal:
+```powershell
+# Install PHP, Composer, and Node.js
+winget install -e --id PHP.PHP
+winget install -e --id GetComposer.Composer
+winget install -e --id OpenJS.NodeJS.LTS
+
+# RESTART your terminal after running these to refresh your PATH!
+```
 
 ### 2. Backend Setup
+Navigate to the backend directory and install dependencies:
 ```bash
 cd backend
 composer install
@@ -78,23 +83,22 @@ php artisan key:generate
 php artisan jwt:secret --force
 ```
 
-**Configure `.env`:**
-Edit `backend/.env` and set these specific values for a local SQLite setup:
-```env
-DB_CONNECTION=sqlite
-DB_DATABASE=database/database.sqlite
-QUEUE_CONNECTION=database
-BROADCAST_CONNECTION=reverb
+**Configure `.env` for SQLite:**
+Ensure these lines exist in your `backend/.env` (manually edit or use these commands):
+```powershell
+# Windows PowerShell command to update .env
+(Get-Content .env) -replace 'DB_CONNECTION=.*', 'DB_CONNECTION=sqlite' -replace 'DB_DATABASE=.*', 'DB_DATABASE=database/database.sqlite' | Set-Content .env
 ```
 
 **Initialize Database:**
-```bash
-# Create the empty SQLite file
-touch database/database.sqlite  # Linux/macOS
-# OR on Windows: New-Item database/database.sqlite
+```powershell
+# Create the SQLite file (Windows)
+New-Item -Path database/database.sqlite -ItemType File
 
+# Run migrations and seeders
 php artisan migrate:fresh --seed
 ```
+*Verification: If you see "Database seeding completed successfully," proceed to Step 3.*
 
 ### 3. Frontend Setup
 ```bash
@@ -104,20 +108,25 @@ npm install
 
 **Configure `.env`:**
 Create `frontend/.env` with these values:
-```env
+```powershell
+# Windows PowerShell one-liner to create frontend .env
+@'
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_WS_HOST=localhost
 VITE_WS_PORT=8080
 VITE_WS_KEY=p4wrtmbchpdt0bkcszul
+'@ | Set-Content .env
 ```
 
 ### 4. Running the Application
-You will need **four** separate terminal windows:
+Open **four** separate terminal windows and run one command in each:
 
-1. **API Server:** `cd backend && php artisan serve`
-2. **Queue Worker:** `cd backend && php artisan queue:work`
-3. **Reverb Server:** `cd backend && php artisan reverb:start`
-4. **Frontend:** `cd frontend && npm run dev`
+| Window | Directory | Command |
+|---|---|---|
+| **1. API** | `backend` | `php artisan serve` |
+| **2. Queue** | `backend` | `php artisan queue:work` |
+| **3. Reverb** | `backend` | `php artisan reverb:start` |
+| **4. Web** | `frontend` | `npm run dev` |
 
 ---
 
