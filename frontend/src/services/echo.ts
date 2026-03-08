@@ -24,7 +24,7 @@ const echo = new Echo({
   wsHost: import.meta.env.VITE_WS_HOST || window.location.hostname,
   wsPort: import.meta.env.VITE_WS_PORT || 8080,
   wssPort: import.meta.env.VITE_WS_PORT || 8080,
-  forceTLS: false,
+  forceTLS: (import.meta.env.VITE_WS_SCHEME || 'http') === 'https',
   enabledTransports: ['ws', 'wss'],
   // Custom authorizer to use the latest token from localStorage
   authorizer: (channel: EchoChannel) => {
