@@ -62,33 +62,15 @@ Choose **Option 1** for first-time setup, then **Option 2** to run.
 
 If you are on a fresh machine (like a Windows Sandbox) and cannot run the automated scripts, follow this exact sequence of commands.
 
-### 1. Install Prerequisites (Pure PowerShell - No winget)
-Run these commands in an **Administrator** terminal to download and set up your environment manually:
-
+### 1. Install Prerequisites (Windows / winget)
+If you don't have the tools installed, run these in an **Administrator** terminal:
 ```powershell
-# 1. Create a tools folder
-New-Item -Path "C:\tools" -ItemType Directory -Force
+# Install PHP, Composer, and Node.js
+winget install -e --id PHP.PHP
+winget install -e --id GetComposer.Composer
+winget install -e --id OpenJS.NodeJS.LTS
 
-# 2. Download & Extract PHP 8.2
-Invoke-WebRequest -Uri "https://windows.php.net/downloads/releases/php-8.2.12-Win32-vs16-x64.zip" -OutFile "C:\tools\php.zip"
-Expand-Archive -Path "C:\tools\php.zip" -DestinationPath "C:\tools\php" -Force
-
-# 3. Download Composer
-Invoke-WebRequest -Uri "https://getcomposer.org/composer.phar" -OutFile "C:\tools\php\composer.phar"
-"@echo off`nphp %~dp0composer.phar %*" | Set-Content "C:\tools\php\composer.bat"
-
-# 4. Download & Extract Node.js 20
-Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.10.0/node-v20.10.0-win-x64.zip" -OutFile "C:\tools\node.zip"
-Expand-Archive -Path "C:\tools\node.zip" -DestinationPath "C:\tools\node_temp" -Force
-Move-Item "C:\tools\node_temp\node-v20.10.0-win-x64\*" "C:\tools\node" -Force
-
-# 5. Add to PATH for this session
-$env:Path += ";C:\tools\php;C:\tools\node"
-
-# 6. Verify
-php -v
-npm -v
-composer --version
+# RESTART your terminal after running these to refresh your PATH!
 ```
 
 ### 2. Backend Setup
