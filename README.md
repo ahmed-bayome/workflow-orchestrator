@@ -46,91 +46,36 @@ Seeded automatically on fresh install (password: `password`):
 
 ### Windows
 ```powershell
-.\run-orchestrator.bat
+.\orchestrator.bat
 ```
 
 ### macOS / Linux
 ```bash
-chmod +x run-orchestrator.sh && ./run-orchestrator.sh
+chmod +x orchestrator.sh && ./orchestrator.sh
 ```
 
-This opens 4 terminal tabs: API server, queue worker, Reverb server, and frontend.
+Choose **Option 1** for first-time setup, then **Option 2** to run.
 
 ---
 
-## 📖 Manual Setup
-
-### 1. Backend
-
-```bash
-cd backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan jwt:secret
-```
-
-Edit `.env`:
-```env
-DB_CONNECTION=sqlite          # or mysql
-QUEUE_CONNECTION=database
-BROADCAST_CONNECTION=reverb
-MAIL_MAILER=log               # use smtp for real emails
-```
-
-```bash
-php artisan migrate:fresh --seed
-```
-
-Start the servers (each in a separate terminal):
-```bash
-php artisan serve           # API on port 8000
-php artisan queue:work      # Background job worker
-php artisan reverb:start    # WebSocket server
-```
-
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-```
-
-Edit `frontend/.env`:
-```env
-VITE_API_BASE_URL=http://localhost:8000/api
-VITE_WS_HOST=localhost
-VITE_WS_PORT=8080
-VITE_WS_KEY=your_reverb_app_key
-```
-
-```bash
-npm run dev     # Starts on http://localhost:5173
-```
-
----
-
-<<<<<<< HEAD
-=======
 ## 🔄 Reset & Re-Seed Database
 
 If you want to wipe all data and start fresh with the default seed data (roles, users, sample workflows), run this from the root directory:
 
 ### Windows
 ```powershell
-.\reset-db.bat
+.\orchestrator.bat  # Then select option 3
 ```
 
 ### macOS / Linux
 ```bash
-chmod +x reset-db.sh && ./reset-db.sh
+./orchestrator.sh    # Then select option 3
 ```
 
-This runs `php artisan migrate:fresh --seed` inside the `backend` directory, restoring all default credentials and sample workflows. Useful when testing or after pumping test data.
+This restores all default credentials and sample workflows. Useful when testing or after pumping test data.
 
 ---
 
->>>>>>> parent of 8c1252f (Enhance automation scripts)
 ## 🧪 Running Tests
 
 ```bash
