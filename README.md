@@ -1,8 +1,11 @@
 # 🚀 Dynamic Workflow Orchestrator
 
 A full-stack dynamic workflow approval system built with **Laravel 11** and **Vue 3**. Supports configurable approval pipelines (sequential, parallel, mixed), dynamic roles, real-time updates, and robust background processing.
+
 ---
+
 ![Image](https://github.com/user-attachments/assets/fb28baf6-8a2f-455e-9c0f-188cad5583aa)
+
 ## ✨ Key Features
 
 - **Dynamic Workflow Engine** — Create workflows (e.g. Purchase Requests, Leave Requests) with flexible multi-step pipelines
@@ -12,6 +15,7 @@ A full-stack dynamic workflow approval system built with **Laravel 11** and **Vu
 - **Dynamic Form Schema** — Define request forms with text, number, select, date, and textarea fields
 - **Background Workers** — Jobs for orchestration, step processing, notifications, and failure handling
 - **Admin Tools** — Reports dashboard, failed job inspection and retry, user and role management
+
 <img width="1536" height="511" alt="unnamed" src="https://github.com/user-attachments/assets/3132143a-8bf0-4891-a79c-1ab0ea4d73a9" />
 
 ---
@@ -29,6 +33,16 @@ A full-stack dynamic workflow approval system built with **Laravel 11** and **Vu
 
 ---
 
+## ✅ Prerequisites
+
+Make sure the following are installed before proceeding:
+
+- **PHP 8.2+** with extensions: `pdo_sqlite`, `mbstring`, `openssl`, `curl`
+- **Composer**
+- **Node.js 20+ & npm**
+
+---
+
 ## 🔑 Default Credentials
 
 Seeded automatically on fresh install (password: `password`):
@@ -39,42 +53,18 @@ Seeded automatically on fresh install (password: `password`):
 | **Manager** | `manager@test.com` |
 | **Employee** | `employee@test.com` |
 | **Finance** | `finance@test.com` |
+| **Legal** | `legal@test.com` |
+| **CEO** | `ceo@test.com` |
+| **HR** | `hr@test.com` |
 
 ---
 
-## ⚡ Quick Start (All-in-One)
+## 📖 Installation
 
-### Windows
-```powershell
-.\orchestrator.bat
-```
+> **Note:** The automated setup scripts (`orchestrator.bat` / `orchestrator.sh`) are provided for convenience but may not work on all machines. Follow the manual steps below for a reliable setup.
 
-### macOS / Linux
-```bash
-chmod +x orchestrator.sh && ./orchestrator.sh
-```
+### Step 1 — Backend
 
-Choose **Option 1** for first-time setup, then **Option 2** to run.
-
----
-
-## 📖 Manual Installation (A to Z Guide)
-
-If you are on a fresh machine (like a Windows Sandbox) and cannot run the automated scripts, follow this exact sequence of commands.
-
-### 1. Install Prerequisites (Windows / winget)
-If you don't have the tools installed, run these in an **Administrator** terminal:
-```powershell
-# Install PHP, Composer, and Node.js
-winget install -e --id PHP.PHP
-winget install -e --id GetComposer.Composer
-winget install -e --id OpenJS.NodeJS.LTS
-
-# RESTART your terminal after running these to refresh your PATH!
-```
-
-### 2. Backend Setup
-Navigate to the backend directory and install dependencies:
 ```bash
 cd backend
 composer install
@@ -83,79 +73,104 @@ php artisan key:generate
 php artisan jwt:secret --force
 ```
 
-**Configure `.env` for SQLite:**
-Ensure these lines exist in your `backend/.env` (manually edit or use these commands):
-```powershell
-# Windows PowerShell command to update .env
-(Get-Content .env) -replace 'DB_CONNECTION=.*', 'DB_CONNECTION=sqlite' -replace 'DB_DATABASE=.*', 'DB_DATABASE=database/database.sqlite' | Set-Content .env
+Create the SQLite database file:
+
+```bash
+# macOS / Linux
+touch database/database.sqlite
+
+# Windows (PowerShell)
+New-Item -Path database/database.sqlite -ItemType File
 ```
 
-**Initialize Database:**
-```powershell
-# Create the SQLite file (Windows)
-New-Item -Path database/database.sqlite -ItemType File
+Open `backend/.env` and set:
 
-# Run migrations and seeders
+```env
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+BROADCAST_CONNECTION=reverb
+QUEUE_CONNECTION=database
+MAIL_MAILER=log
+
+REVERB_APP_ID=808080
+REVERB_APP_KEY=p4wrtmbchpdt0bkcszul
+REVERB_APP_SECRET=your-reverb-secret
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY=p4wrtmbchpdt0bkcszul
+VITE_REVERB_HOST=localhost
+VITE_REVERB_PORT=8080
+VITE_REVERB_SCHEME=http
+```
+
+Run migrations and seed the database:
+
+```bash
 php artisan migrate:fresh --seed
 ```
-*Verification: If you see "Database seeding completed successfully," proceed to Step 3.*
 
-### 3. Frontend Setup
+✅ If you see `Database seeding completed successfully`, you're good to go.
+
+### Step 2 — Frontend
+
 ```bash
 cd ../frontend
 npm install
 ```
 
-**Configure `.env`:**
-Create `frontend/.env` with these values:
-```powershell
-# Windows PowerShell one-liner to create frontend .env
-@'
+Create `frontend/.env`:
+
+```env
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_WS_HOST=localhost
 VITE_WS_PORT=8080
 VITE_WS_KEY=p4wrtmbchpdt0bkcszul
-'@ | Set-Content .env
+VITE_WS_CLUSTER=mt1
 ```
 
-### 4. Running the Application
-Open **four** separate terminal windows and run one command in each:
+### Step 3 — Run the Application
 
-| Window | Directory | Command |
+Open **four** separate terminal windows, each from the project root:
+
+| Terminal | Directory | Command |
 |---|---|---|
 | **1. API** | `backend` | `php artisan serve` |
 | **2. Queue** | `backend` | `php artisan queue:work` |
-| **3. Reverb** | `backend` | `php artisan reverb:start` |
-| **4. Web** | `frontend` | `npm run dev` |
+| **3. WebSocket** | `backend` | `php artisan reverb:start` |
+| **4. Frontend** | `frontend` | `npm run dev` |
+
+Then open **http://localhost:5173** in your browser.
 
 ---
 
 ## 🔄 Reset & Re-Seed Database
 
-If you want to wipe all data and start fresh with the default seed data (roles, users, sample workflows), run this from the root directory:
+To wipe all data and restore default seed data (roles, users, sample workflows):
 
-### Windows
-```powershell
-.\orchestrator.bat  # Then select option 3
-```
-
-### macOS / Linux
 ```bash
-./orchestrator.sh    # Then select option 3
+cd backend && php artisan migrate:fresh --seed
 ```
 
-This restores all default credentials and sample workflows. Useful when testing or after pumping test data.
+---
+
+## 🌱 Pump Test Data
+
+To populate the UI with realistic data (50 requests at various stages):
+
+```bash
+cd backend && php artisan db:seed --class=DataPumpSeeder
+```
+
+This creates 15 additional staff users and 50 realistic Purchase/Leave requests at various approval stages.
 
 ---
 
 ## 🧪 Running Tests
 
 ```bash
-# macOS / Linux
 cd backend && php artisan test
-
-# Windows
-cd backend; php artisan test
 ```
 
 Expected output: **9 tests, 42 assertions, all passing**
@@ -171,58 +186,28 @@ Test coverage includes:
 
 ---
 
-## 🌱 Pump Test Data
-
-To quickly populate the UI with realistic English data (users and requests at various stages):
-
-```bash
-cd backend && php artisan db:seed --class=DataPumpSeeder
-```
-
-This creates:
-- 15 additional staff users with random roles
-- 50 realistic requests (Purchase and Leave) with natural English payloads
-- Randomly processes some requests to different stages (approved, rejected, in-progress)
-
-Refresh the UI after running to see the updated dashboard and reports.
-
----
-
 ## 📡 Queue & Workers
 
-### Queue Driver
-Default: `database` (jobs stored in `jobs` table).
-For production, switch to Redis: `QUEUE_CONNECTION=redis`
+Default queue driver is `database`. For production, switch to Redis: `QUEUE_CONNECTION=redis`
 
-### Running Workers
 ```bash
 # Development
 php artisan queue:work
 
 # Production (recommended)
 php artisan queue:work --queue=default --tries=3 --backoff=5
-
-# With Horizon (Redis only)
-php artisan horizon
 ```
 
-### Failed Jobs (DLQ)
-Failed jobs are stored in the `failed_jobs` table after exhausting retries.
+### Failed Jobs
 
 ```bash
-# List failed jobs
-php artisan queue:failed
-
-# Retry a specific job
-php artisan queue:retry <uuid>
-
-# Retry all failed jobs
-php artisan queue:retry all
+php artisan queue:failed          # List failed jobs
+php artisan queue:retry <uuid>    # Retry specific job
+php artisan queue:retry all       # Retry all
 ```
 
-Admin can also retry jobs from the UI at `/admin/failed-jobs`.
+Admins can also retry jobs from the UI at `/admin/failed-jobs`.
 
-### Retry Policies
 | Job | Tries | Backoff |
 |---|---|---|
 | CreateRequestStepsJob | 3 | 3s, 10s, 30s |
@@ -252,7 +237,7 @@ Admin can also retry jobs from the UI at `/admin/failed-jobs`.
 | POST | `/api/admin/users/{id}/restore` | Restore deleted user |
 | GET | `/api/admin/roles` | List roles |
 | POST | `/api/admin/roles` | Create role |
-| DELETE | `/api/admin/roles/{id}` | Delete role (fails if used in workflow) |
+| DELETE | `/api/admin/roles/{id}` | Delete role |
 | GET | `/api/admin/workflows` | List workflows |
 | POST | `/api/admin/workflows` | Create workflow |
 | PUT | `/api/admin/workflows/{id}` | Update workflow |
@@ -266,7 +251,7 @@ Admin can also retry jobs from the UI at `/admin/failed-jobs`.
 | GET | `/api/requests` | List my requests |
 | POST | `/api/requests` | Submit new request |
 | GET | `/api/requests/{id}` | Get request detail |
-| GET | `/api/requests/{id}/pending` | Get currently pending steps |
+| GET | `/api/requests/{id}/pending` | Get pending steps |
 | POST | `/api/requests/{id}/admin/retry` | Admin retry failed request |
 
 ### Approvals
@@ -320,31 +305,4 @@ Admin can also retry jobs from the UI at `/admin/failed-jobs`.
 }
 ```
 
-Steps with the same `execution_group` run **in parallel**. Steps with different groups run **sequentially**. The pipeline only advances to the next group once all steps in the current group are complete.
-
----
-
-## 🧠 Design Decisions
-
-### Role Membership: Snapshot at Creation
-When a request is submitted, the list of approvers for each step is **snapshotted** from current role members. Changes to role membership after submission do not affect in-flight requests. This ensures consistency and auditability.
-
-### Real-Time: Reverb instead of Firebase
-Laravel Reverb was chosen over Firebase for self-hosted simplicity, tighter Laravel integration, and no external dependency. The architecture is Firebase-compatible — the broadcasting interface can be swapped by changing `BROADCAST_CONNECTION=pusher` and pointing to Firebase via a Pusher-compatible adapter.
-
-### Soft Deletes for Users
-Deleted users are soft-deleted (`deleted_at` timestamp). All historical records (step actions, approvals) remain intact and reference the user ID. The user cannot log in but their history is preserved.
-
-### Idempotency
-`ProcessStepActionJob` checks for an existing `StepAction` record before writing. `AdvanceWorkflowJob` uses `SELECT ... FOR UPDATE` row locking to prevent race conditions during concurrent approvals.
-
----
-
-## 🤖 AI Usage
-
-This project was built with heavy assistance from **Gemini CLI** and **Claude (Anthropic)**:
-
-- **Gemini CLI** was used to scaffold controllers, jobs, migrations, Vue components, and implement features incrementally via targeted prompts
-- **Claude** was used for architecture review, identifying missing requirements, writing focused prompts for Gemini, and reviewing correctness of generated code
-- All generated code was reviewed, tested, and adjusted manually
-- The overall architecture, design decisions, and edge case handling were human-directed
+Steps with the same `execution_group` run **in parallel**.
