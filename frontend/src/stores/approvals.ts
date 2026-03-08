@@ -26,6 +26,9 @@ export const useApprovalsStore = defineStore('approvals', () => {
       .listen('RequestUpdated', (_e: { request: WorkflowRequest }) => {
         fetchPendingApprovals()
       })
+      .listen('StepUpdated', (_e: { step: any }) => {
+        fetchPendingApprovals()
+      })
   }
 
   function unsubscribeFromUpdates() {

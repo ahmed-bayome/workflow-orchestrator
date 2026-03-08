@@ -17,29 +17,21 @@ import { format } from 'date-fns';
 import type { PendingApproval, ApiError } from '@/types';
 import type { AxiosError } from 'axios';
 
-const pendingApprovals = ref<PendingApproval[]>([]);
-const isLoading = ref(true);
+import { useApprovalsStore } from '@/stores/approvals';
+
+const approvalsStore = useApprovalsStore();
 const isSubmitting = ref<number | null>(null);
 const comments = ref<Record<number, string>>({});
 const error = ref('');
 
-const fetchPendingApprovals = async () => {
-  try {
-    const response = await api.get<PendingApproval[]>('/approvals/pending');
-    pendingApprovals.value = response.data;
-    // Initialize comments for each new approval
-    response.data.forEach((item: PendingApproval) => {
-      if (comments.value[item.id] === undefined) {
-        comments.value[item.id] = '';
-      }
-    });
-  } catch (err) {
-    console.error('Error fetching pending approvals:', err);
-    error.value = 'Failed to load pending approvals.';
-  } finally {
-    isLoading.value = false;
-  }
-};
+onMounted(() => {
+  approvalsStore.fetchPendingApprovals();
+  approvalsStore.subscribeToUpdates();
+});
+
+onUnmounted(() => {
+  approvalsStore.unsubscribeFromUpdates();
+});
 
 const handleAction = async (requestId: number, stepId: number, action: 'approve' | 'reject') => {
   if (action === 'reject' && !comments.value[stepId]) {
@@ -55,7 +47,8 @@ const handleAction = async (requestId: number, stepId: number, action: 'approve'
       comment: comments.value[stepId]
     });
     delete comments.value[stepId];
-    await fetchPendingApprovals();
+    // approvalsStore will fetch new list on event or we can call it here too
+    await approvalsStore.fetchPendingApprovals();
   } catch (err) {
     const axiosError = err as AxiosError<ApiError>;
     error.value = axiosError.response?.data?.message || `Failed to ${action} request.`;
@@ -63,19 +56,6 @@ const handleAction = async (requestId: number, stepId: number, action: 'approve'
     isSubmitting.value = null;
   }
 };
-
-import { useApprovalsStore } from '@/stores/approvals';
-
-const approvalsStore = useApprovalsStore();
-
-onMounted(() => {
-  fetchPendingApprovals();
-  approvalsStore.subscribeToUpdates();
-});
-
-onUnmounted(() => {
-  approvalsStore.unsubscribeFromUpdates();
-});
 
 
 </script>
@@ -89,7 +69,7 @@ onUnmounted(() => {
       </div>
       <div class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-bold border border-indigo-100 shadow-sm">
         <ShieldAlert class="w-5 h-5" />
-        <span class="text-lg leading-none">{{ pendingApprovals.length }} Actions</span>
+        <span class="text-lg leading-none">{{ approvalsStore.pendingApprovals.length }} Actions</span>
       </div>
     </div>
 
@@ -100,13 +80,13 @@ onUnmounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="p-20 flex flex-col items-center justify-center gap-6">
+    <div v-if="approvalsStore.loading" class="p-20 flex flex-col items-center justify-center gap-6">
       <div class="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
       <p class="text-gray-400 font-black uppercase tracking-widest text-xs">Awaiting decisions...</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="pendingApprovals.length === 0" class="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-gray-100 shadow-sm">
+    <div v-else-if="approvalsStore.pendingApprovals.length === 0" class="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-gray-100 shadow-sm">
       <div class="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-200">
         <CheckCircle2 class="w-12 h-12" />
       </div>
@@ -116,7 +96,7 @@ onUnmounted(() => {
 
     <div v-else class="space-y-8">
       <div
-        v-for="item in pendingApprovals"
+        v-for="item in approvalsStore.pendingApprovals"
         :key="item.id"
         class="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden transition-all"
       >

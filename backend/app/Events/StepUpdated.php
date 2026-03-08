@@ -21,6 +21,7 @@ class StepUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
+            new PrivateChannel('requests'),
             new PrivateChannel('request.' . $this->step->request_id),
         ];
     }
