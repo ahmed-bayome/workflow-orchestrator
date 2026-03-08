@@ -50,7 +50,7 @@ class AdvanceWorkflowJob implements ShouldQueue
                 
                 Log::info("Request {$request->id} rejected");
                 if (class_exists('App\Events\RequestUpdated')) {
-                    broadcast(new RequestUpdated($request->fresh()))->toOthers();
+                    broadcast(new RequestUpdated($request->fresh()));
                 }
                 return;
             }

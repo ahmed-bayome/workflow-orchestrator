@@ -78,7 +78,7 @@ class ProcessStepActionJob implements ShouldQueue
 
             // Broadcast step update
             if (class_exists('App\Events\StepUpdated')) {
-                broadcast(new StepUpdated($step->fresh()))->toOthers();
+                broadcast(new StepUpdated($step->fresh()));
             }
         });
     }
