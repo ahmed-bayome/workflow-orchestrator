@@ -58,6 +58,69 @@ Choose **Option 1** for first-time setup, then **Option 2** to run.
 
 ---
 
+## 📖 Manual Installation (Fallback)
+
+If you cannot run the automated scripts, follow these steps to set up the project manually.
+
+### 1. Prerequisites
+Ensure you have the following installed on your system:
+- **PHP 8.2+** (with `pdo_sqlite`, `mbstring`, `openssl`, and `curl` extensions enabled)
+- **Composer**
+- **Node.js 20+ & npm**
+- **SQLite**
+
+### 2. Backend Setup
+```bash
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret --force
+```
+
+**Configure `.env`:**
+Edit `backend/.env` and set these specific values for a local SQLite setup:
+```env
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=reverb
+```
+
+**Initialize Database:**
+```bash
+# Create the empty SQLite file
+touch database/database.sqlite  # Linux/macOS
+# OR on Windows: New-Item database/database.sqlite
+
+php artisan migrate:fresh --seed
+```
+
+### 3. Frontend Setup
+```bash
+cd ../frontend
+npm install
+```
+
+**Configure `.env`:**
+Create `frontend/.env` with these values:
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_WS_HOST=localhost
+VITE_WS_PORT=8080
+VITE_WS_KEY=p4wrtmbchpdt0bkcszul
+```
+
+### 4. Running the Application
+You will need **four** separate terminal windows:
+
+1. **API Server:** `cd backend && php artisan serve`
+2. **Queue Worker:** `cd backend && php artisan queue:work`
+3. **Reverb Server:** `cd backend && php artisan reverb:start`
+4. **Frontend:** `cd frontend && npm run dev`
+
+---
+
 ## 🔄 Reset & Re-Seed Database
 
 If you want to wipe all data and start fresh with the default seed data (roles, users, sample workflows), run this from the root directory:

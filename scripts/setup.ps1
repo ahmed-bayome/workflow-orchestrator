@@ -2,16 +2,139 @@
 
 Write-Host "Starting setup..." -ForegroundColor Cyan
 
-# 0. Pre-flight Checks
-Write-Host "`n--- Pre-flight Checks ---" -ForegroundColor Yellow
-$dependencies = @("php", "composer", "npm")
-foreach ($dep in $dependencies) {
-    if (!(Get-Command $dep -ErrorAction SilentlyContinue)) {
-        Write-Error "Error: $dep is not installed or not in PATH. Please install it and try again."
+# --- Environment Pre-configuration ---
+# Force TLS 1.2 for secure downloads (required for fresh Windows installs)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+$toolsDir = "$PSScriptRoot/.tools"
+if (!(Test-Path $toolsDir)) { New-Item -ItemType Directory -Path $toolsDir | Out-Null }
+
+# --- Helper Functions ---
+function Refresh-Environment {
+    Write-Host "Refreshing PATH..." -ForegroundColor Gray
+    $env:Path = "$toolsDir\php;$toolsDir\node;$env:Path"
+}
+
+function Download-WithRetry {
+    param([string]$name, [string]$url, [string]$outPath)
+    $maxRetries = 3
+    $retryCount = 0
+    $success = $false
+
+    while (-not $success -and $retryCount -lt $maxRetries) {
+        try {
+            Write-Host "Downloading $name (Attempt $($retryCount + 1))..." -ForegroundColor Yellow
+            Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing -TimeoutSec 60
+            if (Test-Path $outPath) { $success = $true }
+        } catch {
+            $retryCount++
+            Write-Host "Download failed. Retrying in 2 seconds..." -ForegroundColor Gray
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    if (-not $success) {
+        Write-Error "CRITICAL: Failed to download $name after $maxRetries attempts. Please check your internet connection."
         exit 1
     }
 }
-Write-Host "All dependencies found." -ForegroundColor Green
+
+function Download-Manual {
+    param([string]$name, [string]$url, [string]$zipPath, [string]$extractDir)
+    
+    if (Test-Path $extractDir) { return } # Skip if already exists
+    
+    Download-WithRetry -name $name -url $url -outPath $zipPath
+    
+    Write-Host "Extracting $name..." -ForegroundColor Gray
+    if (!(Test-Path $extractDir)) { New-Item -ItemType Directory -Path $extractDir | Out-Null }
+    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+    Remove-Item $zipPath -ErrorAction SilentlyContinue
+}
+
+function Setup-PortablePHP {
+    $phpUrl = "https://windows.php.net/downloads/releases/php-8.2.12-Win32-vs16-x64.zip"
+    $phpDir = "$toolsDir\php"
+    if (!(Test-Path "$phpDir\php.exe")) {
+        Download-Manual -name "PHP" -url $phpUrl -zipPath "$toolsDir\php.zip" -extractDir $phpDir
+        
+        # Configure php.ini
+        if (Test-Path "$phpDir\php.ini-development") {
+            Copy-Item "$phpDir\php.ini-development" "$phpDir\php.ini" -Force
+            $ini = Get-Content "$phpDir\php.ini"
+            $ini = $ini -replace ';extension_dir = "ext"', 'extension_dir = "ext"'
+            $ini = $ini -replace ';extension=pdo_sqlite', 'extension=pdo_sqlite'
+            $ini = $ini -replace ';extension=sqlite3', 'extension=sqlite3'
+            $ini = $ini -replace ';extension=mbstring', 'extension=mbstring'
+            $ini = $ini -replace ';extension=openssl', 'extension=openssl'
+            $ini = $ini -replace ';extension=curl', 'extension=curl'
+            $ini | Set-Content "$phpDir\php.ini"
+        } else {
+            Write-Error "Extraction failed: php.ini-development not found in $phpDir"
+            exit 1
+        }
+    }
+}
+
+function Setup-PortableComposer {
+    $compDir = "$toolsDir\php"
+    if (!(Test-Path "$compDir\composer.phar")) {
+        Write-Host "`nConfiguring Composer..." -ForegroundColor Yellow
+        Download-WithRetry -name "Composer" -url "https://getcomposer.org/composer.phar" -outPath "$compDir\composer.phar"
+        # Create a batch shim for composer
+        "@echo off`nphp %~dp0composer.phar %*" | Set-Content "$compDir\composer.bat"
+    }
+}
+
+function Setup-PortableNode {
+    $nodeUrl = "https://nodejs.org/dist/v20.10.0/node-v20.10.0-win-x64.zip"
+    $nodeDir = "$toolsDir\node_temp"
+    $finalDir = "$toolsDir\node"
+    if (!(Test-Path "$finalDir\node.exe")) {
+        Download-Manual -name "Node.js" -url $nodeUrl -zipPath "$toolsDir\node.zip" -extractDir $nodeDir
+        # Move files from nested folder to $toolsDir\node
+        if (!(Test-Path $finalDir)) { New-Item -ItemType Directory -Path $finalDir | Out-Null }
+        $innerFolder = Get-ChildItem $nodeDir | Select-Object -First 1
+        Move-Item "$($innerFolder.FullName)\*" "$finalDir" -Force
+        Remove-Item $nodeDir -Recurse -ErrorAction SilentlyContinue
+    }
+}
+
+function Install-WithWinget {
+    param([string]$name, [string]$wingetId)
+    Write-Host "`n$name is missing. Attempting winget..." -ForegroundColor Yellow
+    if (!(Get-Command winget -ErrorAction SilentlyContinue)) { return $false }
+    winget install --id $wingetId --silent --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -eq 0) { Refresh-Environment; return $true }
+    return $false
+}
+
+# 0. Pre-flight Checks & "A to Z" Installation
+Write-Host "`n--- Pre-flight Checks ---" -ForegroundColor Yellow
+
+# PHP Check
+if (!(Get-Command php -ErrorAction SilentlyContinue)) {
+    if (!(Install-WithWinget -name "PHP" -wingetId "PHP.PHP")) {
+        Setup-PortablePHP
+    }
+}
+
+# Composer Check
+if (!(Get-Command composer -ErrorAction SilentlyContinue)) {
+    if (!(Install-WithWinget -name "Composer" -wingetId "GetComposer.Composer")) {
+        Setup-PortableComposer
+    }
+}
+
+# Node Check
+if (!(Get-Command npm -ErrorAction SilentlyContinue)) {
+    if (!(Install-WithWinget -name "Node.js" -wingetId "OpenJS.NodeJS.LTS")) {
+        Setup-PortableNode
+    }
+}
+
+Refresh-Environment
+Write-Host "All dependencies ready (using portable tools if necessary)." -ForegroundColor Green
 
 # 1. Backend Setup
 Write-Host "`n--- Setting up Backend ---" -ForegroundColor Yellow
