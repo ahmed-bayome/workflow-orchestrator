@@ -1,11 +1,8 @@
 # 🚀 Dynamic Workflow Orchestrator
 
 A full-stack dynamic workflow approval system built with **Laravel 11** and **Vue 3**. Supports configurable approval pipelines (sequential, parallel, mixed), dynamic roles, real-time updates, and robust background processing.
-
 ---
-
 ![Image](https://github.com/user-attachments/assets/fb28baf6-8a2f-455e-9c0f-188cad5583aa)
-
 ## ✨ Key Features
 
 - **Dynamic Workflow Engine** — Create workflows (e.g. Purchase Requests, Leave Requests) with flexible multi-step pipelines
@@ -15,7 +12,6 @@ A full-stack dynamic workflow approval system built with **Laravel 11** and **Vu
 - **Dynamic Form Schema** — Define request forms with text, number, select, date, and textarea fields
 - **Background Workers** — Jobs for orchestration, step processing, notifications, and failure handling
 - **Admin Tools** — Reports dashboard, failed job inspection and retry, user and role management
-
 <img width="1536" height="511" alt="unnamed" src="https://github.com/user-attachments/assets/3132143a-8bf0-4891-a79c-1ab0ea4d73a9" />
 
 ---
@@ -46,64 +42,95 @@ Seeded automatically on fresh install (password: `password`):
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start (All-in-One)
 
-Everything is managed through a single file: **`manager.bat`**
+### Windows
+```powershell
+.\run-orchestrator.bat
+```
 
-| Platform | Command |
-|---|---|
-| **Windows** | `.\manager.bat` |
-| **macOS** | `bash manager.bat` |
-| **Linux** | `bash manager.bat` |
+### macOS / Linux
+```bash
+chmod +x run-orchestrator.sh && ./run-orchestrator.sh
+```
 
-> **Prerequisites:** Git (to clone the repo). Everything else — PHP, Composer, Node.js, npm — is installed automatically by the manager.
-
-### First time on a fresh machine
-
-1. Clone the repo and navigate into it:
-   ```bash
-   git clone <repo-url>
-   cd <repo-folder>
-   ```
-
-2. Run the manager:
-   ```bash
-   # Windows
-   .\manager.bat
-
-   # macOS / Linux
-   bash manager.bat
-   ```
-
-3. Select **`[1] Full setup`** — this installs all dependencies, configures `.env`, runs migrations, and seeds the database.
-
-4. Select **`[2] Run the app`** — this opens 4 terminal tabs: API server, queue worker, Reverb WebSocket server, and the frontend dev server.
-
-5. Open [http://localhost:5173](http://localhost:5173) and log in with any of the default credentials above.
+This opens 4 terminal tabs: API server, queue worker, Reverb server, and frontend.
 
 ---
 
-## 🎛️ Manager Menu
+## 📖 Manual Setup
 
-```
-  [1]  Full setup            | deps, .env, migrate, seed
-  [2]  Run the app           | API, Queue, Reverb, Frontend
-  [3]  Install dependencies  | Composer + npm
-  [4]  Pump data             | runs DataPumpSeeder
-  [5]  Reset database        | fresh migrations + seeders
-  [6]  Exit
+### 1. Backend
+
+```bash
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
 ```
 
-| Option | What it does |
-|---|---|
-| **Full setup** | First-time setup: installs Composer + npm deps, creates and configures `.env`, generates app key + JWT secret, creates the SQLite database, runs migrations and seeders |
-| **Run the app** | Launches all 4 services in separate terminal tabs (API · Queue · Reverb · Frontend) |
-| **Install dependencies** | Runs `composer install` and `npm install` without touching the database |
-| **Pump data** | Runs `DataPumpSeeder` — adds 15 staff users and 50 realistic requests at various stages for testing |
-| **Reset database** | Wipes the database and re-runs all migrations + seeders from scratch |
+Edit `.env`:
+```env
+DB_CONNECTION=sqlite          # or mysql
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=reverb
+MAIL_MAILER=log               # use smtp for real emails
+```
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Start the servers (each in a separate terminal):
+```bash
+php artisan serve           # API on port 8000
+php artisan queue:work      # Background job worker
+php artisan reverb:start    # WebSocket server
+```
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+Edit `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_WS_HOST=localhost
+VITE_WS_PORT=8080
+VITE_WS_KEY=your_reverb_app_key
+```
+
+```bash
+npm run dev     # Starts on http://localhost:5173
+```
 
 ---
 
+<<<<<<< HEAD
+=======
+## 🔄 Reset & Re-Seed Database
+
+If you want to wipe all data and start fresh with the default seed data (roles, users, sample workflows), run this from the root directory:
+
+### Windows
+```powershell
+.\reset-db.bat
+```
+
+### macOS / Linux
+```bash
+chmod +x reset-db.sh && ./reset-db.sh
+```
+
+This runs `php artisan migrate:fresh --seed` inside the `backend` directory, restoring all default credentials and sample workflows. Useful when testing or after pumping test data.
+
+---
+
+>>>>>>> parent of 8c1252f (Enhance automation scripts)
 ## 🧪 Running Tests
 
 ```bash
@@ -127,10 +154,28 @@ Test coverage includes:
 
 ---
 
+## 🌱 Pump Test Data
+
+To quickly populate the UI with realistic English data (users and requests at various stages):
+
+```bash
+cd backend && php artisan db:seed --class=DataPumpSeeder
+```
+
+This creates:
+- 15 additional staff users with random roles
+- 50 realistic requests (Purchase and Leave) with natural English payloads
+- Randomly processes some requests to different stages (approved, rejected, in-progress)
+
+Refresh the UI after running to see the updated dashboard and reports.
+
+---
+
 ## 📡 Queue & Workers
 
 ### Queue Driver
-Default: `database` (jobs stored in `jobs` table). For production, switch to Redis: `QUEUE_CONNECTION=redis`
+Default: `database` (jobs stored in `jobs` table).
+For production, switch to Redis: `QUEUE_CONNECTION=redis`
 
 ### Running Workers
 ```bash
@@ -148,15 +193,19 @@ php artisan horizon
 Failed jobs are stored in the `failed_jobs` table after exhausting retries.
 
 ```bash
-php artisan queue:failed          # List failed jobs
-php artisan queue:retry <uuid>    # Retry a specific job
-php artisan queue:retry all       # Retry all failed jobs
+# List failed jobs
+php artisan queue:failed
+
+# Retry a specific job
+php artisan queue:retry <uuid>
+
+# Retry all failed jobs
+php artisan queue:retry all
 ```
 
 Admin can also retry jobs from the UI at `/admin/failed-jobs`.
 
 ### Retry Policies
-
 | Job | Tries | Backoff |
 |---|---|---|
 | CreateRequestStepsJob | 3 | 3s, 10s, 30s |
