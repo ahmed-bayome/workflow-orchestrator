@@ -5,4 +5,4 @@ nixPkgs = ["nodejs"]
 cmds = ["npm install", "npm run build"]
 
 [start]
-cmd = "npx serve -s dist -l $PORT"
+cmd = "npx serve -s dist --listen $PORT"
